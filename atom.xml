@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <title>Huw Campbell</title>
+    <link href="https://huwcampbell.com/atom.xml" rel="self" />
+    <link href="https://huwcampbell.com" />
+    <id>https://huwcampbell.com/atom.xml</id>
+    <author>
+        <name>Huw Campbell</name>
+        <email>huw@huwcampbell.com</email>
+    </author>
+    <updated>2020-09-01T00:00:00Z</updated>
+    <entry>
+    <title>Ambling Through The Ice</title>
+    <link href="https://huwcampbell.com/posts/2020-09-01-ambling-through-the-ice.html" />
+    <id>https://huwcampbell.com/posts/2020-09-01-ambling-through-the-ice.html</id>
+    <published>2020-09-01T00:00:00Z</published>
+    <updated>2020-09-01T00:00:00Z</updated>
+    <summary type="html"><![CDATA[An soft introduction to Icicle]]></summary>
+</entry>
+
+</feed>
