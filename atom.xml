@@ -8,8 +8,16 @@
         <name>Huw Campbell</name>
         <email>huw@huwcampbell.com</email>
     </author>
-    <updated>2020-09-01T00:00:00Z</updated>
+    <updated>2020-09-04T00:00:00Z</updated>
     <entry>
+    <title>Traversals as Optimisations</title>
+    <link href="https://huwcampbell.com/posts/2020-09-04-traversals-for-optimisations.html" />
+    <id>https://huwcampbell.com/posts/2020-09-04-traversals-for-optimisations.html</id>
+    <published>2020-09-04T00:00:00Z</published>
+    <updated>2020-09-04T00:00:00Z</updated>
+    <summary type="html"><![CDATA[How traversals over our syntax tree help make optimisation passes simple and easy to maintain]]></summary>
+</entry>
+<entry>
     <title>Ambling Through The Ice</title>
     <link href="https://huwcampbell.com/posts/2020-09-01-ambling-through-the-ice.html" />
     <id>https://huwcampbell.com/posts/2020-09-01-ambling-through-the-ice.html</id>
