@@ -27,14 +27,15 @@ implicit pieces of information:
 - A time at which the event was recorded.
 
 
-With this we could imagine that two
-data scientists may want to know: has this user gone to the home screen;
-and what's the number of views for "sport" in the past 4 weeks.
+With this we could imagine that two data scientists may want to know:
+have any of the user's last 10 pages views been to the home screen;
+and what's the number of views for _sports_ in the past 4 weeks.
 
 They might write this as:
 ```
 feature viewed_homepage =
   from page_views
+    in latest 10
     in any (category == "home")
 
 feature mean_view_time =
