@@ -8,8 +8,16 @@
         <name>Huw Campbell</name>
         <email>huw@huwcampbell.com</email>
     </author>
-    <updated>2020-09-04T00:00:00Z</updated>
+    <updated>2020-09-18T00:00:00Z</updated>
     <entry>
+    <title>Optimised Row Columnar for Haskell</title>
+    <link href="https://huwcampbell.com/posts/2020-09-18-announcing-orc-haskell.html" />
+    <id>https://huwcampbell.com/posts/2020-09-18-announcing-orc-haskell.html</id>
+    <published>2020-09-18T00:00:00Z</published>
+    <updated>2020-09-18T00:00:00Z</updated>
+    <summary type="html"><![CDATA[A new library for reading and writing Optimised Row Columnar files in native Haskell]]></summary>
+</entry>
+<entry>
     <title>Traversals as Optimisations</title>
     <link href="https://huwcampbell.com/posts/2020-09-04-traversals-for-optimisations.html" />
     <id>https://huwcampbell.com/posts/2020-09-04-traversals-for-optimisations.html</id>
