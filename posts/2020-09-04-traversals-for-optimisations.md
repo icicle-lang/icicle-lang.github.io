@@ -1,7 +1,7 @@
 ---
 title: Traversals as Optimisations
 description: How traversals over our syntax tree help make optimisation passes simple and easy to maintain
-author: Huw
+author: Huw Campbell
 ---
 
 Using traversals and a simple fixpoint monad, we can efficiently crunch Icicle expressions to a minimal, efficient kernel. This speeds up downstream compilation, reduces generated code size, and makes our queries run faster.
