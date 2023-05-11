@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+  <!-- Basic Page Needs
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <meta charset="utf-8">
+  <title>Icicle Lang - Traversals as Optimisations</title>
+  <meta name="description" content>
+  <meta name="author" content>
+
+  <!-- Mobile Specific Metas
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- FONT
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link href="https://fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+
+  <!-- CSS
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link rel="stylesheet" href="../css/normalize.css">
+  <link rel="stylesheet" href="../css/skeleton.css">
+  <link rel="stylesheet" href="../css/syntax.css">
+  <link rel="stylesheet" href="../css/custom.css">
+
+  <!-- Favicon
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link rel="icon" type="image/png" href="images/favicon.png">
+
+  <!-- ATOM Feed
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link href="../atom.xml" type="application/atom+xml" rel="alternate" title="ATOM Feed" />
+
+</head>
+<body>
+  <a href="https://github.com/icicle-lang/icicle" class="github-corner" aria-label="View source on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
+
+  <!-- Primary Body
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <div class="container">
+    <div class="three columns sidebar">
+        <nav>
+            <h3 id="logo">Icicle</h3>
+            <ul>
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="../archive.html">Archive</a></li>
+                <li><a href="../pages/about.html">About</a></li>
+                <li><a href="../pages/benchmarks.html">Benchmarks</a></li>
+                <li><a href="../pages/collaboration.html">Collaboration</a></li>
+            </ul>
+        </nav>
+        &nbsp;
+    </div>
+
+    <div class="nine columns content">
+        <h1>Traversals as Optimisations</h1>
+
+        <div class="info">
+    Posted on September  4, 2020
+    
+        by Huw Campbell
+    
+</div>
+<br />
+
+<p>Using traversals and a simple fixpoint monad, we can efficiently crunch Icicle expressions to a minimal, efficient kernel. This speeds up downstream compilation, reduces generated code size, and makes our queries run faster.</p>
+<p>Icicle is a high level language. The source language has mode polymorphism for error handling and runtime staging, type inference, function abstractions, and syntactic sugar to make describing features fast and easy. This is great, but due to the large surface area, makes its source language is not a great target for writing compiler optimisation passes.</p>
+<p>Fortunately though, during compilation we pass through a simple, typed expression language called <em>Core</em>.</p>
+<p>In this post, we’ll look at how we can apply high level optimisations in <em>Core</em> to significantly reduce our amount of code and remove redundant code branches.</p>
+<h2 id="traversals">Traversals</h2>
+<p>If we write a traversal over the <em>children</em> of an expression tree, we can pattern match on key terms, and then trivially recurse elsewhere in the tree to find all the sub-expressions where this pattern match applies.</p>
+<p>The <code>Plated</code> type class from the Haskell <a href="https://hackage.haskell.org/package/lens">lens</a> library allows us to <a href="http://community.haskell.org/~ndm/uniplate/">scrap our boilerplate</a> by recursively traversing syntax trees in this manner. Twan van Laarhoven, who perhaps not coïncidentally invented modern lenses, has a great <a href="https://twanvl.nl/blog/haskell/traversing-syntax-trees">blog post</a> about traversals like plated.</p>
+<p>Here’s the simplified definition:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="kw">class</span> <span class="dt">Plated</span> a <span class="kw">where</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true"></a><span class="ot">  plate ::</span> <span class="kw">forall</span> f<span class="op">.</span> <span class="dt">Applicative</span> f <span class="ot">=&gt;</span> (a <span class="ot">-&gt;</span> f a) <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> f a</span></code></pre></div>
+<p>And here is our core expression language<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="kw">data</span> <span class="dt">Exp</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true"></a> <span class="co">-- | Read a variable from environment</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true"></a> <span class="ot">=</span> <span class="dt">XVar</span> <span class="op">!</span><span class="dt">Name</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true"></a> <span class="co">-- | A predefined primitive</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true"></a> <span class="op">|</span> <span class="dt">XPrim</span> <span class="op">!</span><span class="dt">Prim</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true"></a> <span class="co">-- | A constant simple value with its type</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true"></a> <span class="op">|</span> <span class="dt">XValue</span> <span class="op">!</span><span class="dt">ValType</span> <span class="op">!</span><span class="dt">BaseValue</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true"></a> <span class="co">-- | Application</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true"></a> <span class="op">|</span> <span class="dt">XApp</span> <span class="op">!</span><span class="dt">Exp</span> <span class="op">!</span><span class="dt">Exp</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true"></a> <span class="co">-- | Lambda abstraction</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true"></a> <span class="op">|</span> <span class="dt">XLam</span> <span class="op">!</span><span class="dt">Name</span> <span class="op">!</span><span class="dt">ValType</span> <span class="op">!</span><span class="dt">Exp</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true"></a> <span class="co">-- | Let binding</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true"></a> <span class="op">|</span> <span class="dt">XLet</span> <span class="op">!</span><span class="dt">Name</span> <span class="op">!</span><span class="dt">Exp</span> <span class="op">!</span><span class="dt">Exp</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true"></a> <span class="kw">deriving</span> (<span class="dt">Eq</span>, <span class="dt">Show</span>)</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true"></a><span class="kw">data</span> <span class="dt">Prim</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true"></a> <span class="co">-- | Minimal things like numeric, string, and date primitives.</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true"></a> <span class="ot">=</span> <span class="dt">PrimMinimal</span>  <span class="op">!</span><span class="dt">PrimMinimal</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true"></a> <span class="co">-- | Fold and return type</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true"></a> <span class="op">|</span> <span class="dt">PrimFold</span>     <span class="op">!</span><span class="dt">PrimFold</span> <span class="op">!</span><span class="dt">ValType</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true"></a> <span class="kw">deriving</span> (<span class="dt">Eq</span>, <span class="dt">Show</span>)</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true"></a></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true"></a><span class="co">-- | Folds for destructing things (catamorphisms)</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true"></a><span class="kw">data</span> <span class="dt">PrimFold</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true"></a> <span class="co">-- | If then else fold over bools</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true"></a> <span class="ot">=</span> <span class="dt">PrimFoldBool</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true"></a> <span class="co">-- | Case expression over an Option</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true"></a> <span class="op">|</span> <span class="dt">PrimFoldOption</span> <span class="op">!</span><span class="dt">ValType</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true"></a> <span class="co">-- | Case expression over a Sum</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true"></a> <span class="op">|</span> <span class="dt">PrimFoldSum</span>    <span class="op">!</span><span class="dt">ValType</span> <span class="op">!</span><span class="dt">ValType</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true"></a> <span class="kw">deriving</span> (<span class="dt">Eq</span>, <span class="dt">Show</span>)</span></code></pre></div>
+<p>Pretty standard stuff. Our primitive type contains a number of folds which we compile case matches to. <code>PrimFoldBool</code> for example is what an <code>if _ then _ else</code> from the source language becomes.</p>
+<p><em>It’s the combination of our folds and expressions which are most interesting when it comes to optimisation rules.</em></p>
+<p>Remembering that <code>plate</code> is a traversal over the <em>children</em> of an expression tree, here is our <code>Plated</code> instance:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="kw">instance</span> <span class="dt">Plated</span> <span class="dt">Exp</span> <span class="kw">where</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a>  plate f (<span class="dt">XApp</span> x y) <span class="ot">=</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true"></a>    <span class="dt">XApp</span> <span class="op">&lt;$&gt;</span> f x <span class="op">&lt;*&gt;</span> f y</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true"></a>  plate f (<span class="dt">XLam</span> n t x) <span class="ot">=</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true"></a>    <span class="dt">XLam</span> n t <span class="op">&lt;$&gt;</span> f x</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true"></a>  plate f (<span class="dt">XLet</span> n x y) <span class="ot">=</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true"></a>    <span class="dt">XLet</span> n <span class="op">&lt;$&gt;</span> f x <span class="op">&lt;*&gt;</span> f y</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true"></a>  plate _ x<span class="op">@</span><span class="dt">XVar</span> {} <span class="ot">=</span> <span class="fu">pure</span> x</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true"></a>  plate _ x<span class="op">@</span><span class="dt">XPrim</span> {} <span class="ot">=</span> <span class="fu">pure</span> x</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true"></a>  plate _ x<span class="op">@</span><span class="dt">XValue</span> {} <span class="ot">=</span> <span class="fu">pure</span> x</span></code></pre></div>
+<p>This allows for extremely concise traversals, for example, we can easily count how many times a variable is used in an expression (this can be useful when figuring out if we should inline it for instance).</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="ot">foldExp ::</span> <span class="dt">Monoid</span> x <span class="ot">=&gt;</span> (<span class="dt">Exp</span> <span class="ot">-&gt;</span> x) <span class="ot">-&gt;</span> (<span class="dt">Exp</span> <span class="ot">-&gt;</span> x)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true"></a>foldExp <span class="ot">=</span> foldMapOf plate</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true"></a><span class="ot">varCount ::</span> <span class="dt">Name</span> <span class="ot">-&gt;</span> <span class="dt">Exp</span> <span class="ot">-&gt;</span> <span class="dt">Sum</span> <span class="dt">Int</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true"></a>varCount i (<span class="dt">XVar</span> j) <span class="op">|</span> i <span class="op">==</span> j <span class="ot">=</span> <span class="dt">Sum</span> <span class="dv">1</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true"></a>varCount i x <span class="ot">=</span> foldExp (varCount i) x</span></code></pre></div>
+<p>The key transformer we’ll use during optimisation however is <code>transformM</code>, which traverses every element in the tree, in a bottom-up manner.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="ot">transformM ::</span> (<span class="dt">Monad</span> m, <span class="dt">Plated</span> a) <span class="ot">=&gt;</span> (a <span class="ot">-&gt;</span> m a) <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> m a</span></code></pre></div>
+<p>There’s also a pure counterpart <code>transform</code>, but we’re going to need a fresh name supply, and a way to indicate if we’ve reached a fix point. We do this with a custom monad <code>FixT</code>. For this post we’ll use an alternative version, as it is isomorphic to <code>WriterT Any</code> (with <code>Any</code> from <code>Data.Monoid</code>), where if we make any progress, we indicate this with a progress function instead or <code>pure</code> or <code>return</code>.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a><span class="kw">type</span> <span class="dt">FixT</span> m a <span class="ot">=</span> <span class="dt">WriterT</span> <span class="dt">Any</span> m a</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true"></a><span class="ot">progress ::</span> <span class="dt">Monad</span> m <span class="ot">=&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">FixT</span> m a</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true"></a>progress a <span class="ot">=</span> <span class="kw">do</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true"></a>  tell (<span class="dt">Any</span> <span class="dt">True</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true"></a>  <span class="fu">return</span> a</span></code></pre></div>
+<p>Then to reach a fixpoint, we recursively call this function until there is no more work to do</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true"></a><span class="ot">fixpoint ::</span> <span class="dt">Monad</span> m <span class="ot">=&gt;</span> (a <span class="ot">-&gt;</span> <span class="dt">FixT</span> m a) <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> m a</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true"></a>fixpoint f a</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true"></a> <span class="ot">=</span> <span class="kw">do</span> (a', progress) <span class="ot">&lt;-</span> runWriter (f a)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true"></a>      <span class="kw">case</span> progress <span class="kw">of</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true"></a>        <span class="dt">Any</span> <span class="dt">True</span>  <span class="ot">-&gt;</span> fixpoint f a'</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true"></a>        <span class="dt">Any</span> <span class="dt">False</span> <span class="ot">-&gt;</span> <span class="fu">return</span> a'</span></code></pre></div>
+<p>That’s all the tools we need to write our optimisation passes.</p>
+<h2 id="simple-passes">Simple Passes</h2>
+<p>The simplest optimisation we use is constant folding of primitive functions. If a primitive function is fully saturated with real values, we can run our core evaluator and replace the expression with the new result.</p>
+<p>It looks something like this (where we have helper function type signatures as comments).</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true"></a><span class="co">-- takePrimApps :: Exp  -&gt; Maybe (Prim, [Exp])</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true"></a><span class="co">-- takeValue    :: Exp  -&gt; Maybe Value</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true"></a><span class="co">-- simpPrim     :: Prim -&gt; [Value] -&gt; Maybe Exp</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true"></a><span class="ot">constantFold ::</span> <span class="dt">Monad</span> m <span class="ot">=&gt;</span> <span class="dt">Exp</span> <span class="ot">-&gt;</span> <span class="dt">FixT</span> m <span class="dt">Exp</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true"></a>constantFold unsimplified</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true"></a>  <span class="op">|</span> <span class="dt">Just</span> (prim, args) <span class="ot">&lt;-</span> takePrimApps unsimplified</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true"></a>  , <span class="dt">Just</span> valueArgs    <span class="ot">&lt;-</span> <span class="fu">traverse</span> takeValue args</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true"></a>  , <span class="dt">Just</span> simplified   <span class="ot">&lt;-</span> simpPrim prim valueArgs</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true"></a>  <span class="ot">=</span> progress simplified</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true"></a>  <span class="op">|</span> <span class="fu">otherwise</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true"></a>  <span class="ot">=</span> <span class="fu">return</span> unsimplified</span></code></pre></div>
+<p>Notice that we’re matching on the whole expression here. It’s extremely unlikely that the user’s whole program is a single primitive application, so we need to traverse the leaves of the expression tree, finding where we might be able to constant fold. Fortunately, we have just the function:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true"></a><span class="ot">simpExp ::</span> <span class="dt">Monad</span> m <span class="ot">=&gt;</span> <span class="dt">Exp</span> <span class="ot">-&gt;</span> <span class="dt">FixT</span> m <span class="dt">Exp</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true"></a>simpExp <span class="ot">=</span> transformM constantFold</span></code></pre></div>
+<p>A slightly more advanced optimisation is known as the case of known constructor optimisation. Let’s have a look with an example:</p>
+<pre><code>Sum_fold#
+  (\a -&gt; False)
+  (\b -&gt; eq# b b_test)
+  (right# (get_location# val))</code></pre>
+<p>Here, <code>Sum_fold#</code> is a primitive which acts like a Haskell <code>case</code> expression over an <code>Either</code>. The arguments are: the lambda of the left case; that of the right case; then the scrutinised expression.</p>
+<p>Here, even though we don’t have a <code>val</code> at compile time. We can see that the result is always going to take the right branch of the fold, and therefore rewrite this expression to</p>
+<pre><code>let b = get_location# val
+ in eq# b b_test</code></pre>
+<p>The scrutinee in the example above (<code>right# (get_location# val)</code>), is always going to end up with a <code>Right</code>, even though it can’t be constant folded, due to <code>right#</code> being the known constructor of a <code>Right</code> value. We refer to this as a <em>irrefutable</em> expression.</p>
+<h2 id="something-more-interesting">Something More Interesting</h2>
+<p>A more challenging example of a pattern which appears pretty regularly due to inlining and the way in which our modal type system handles error conditions is something like this:</p>
+<pre><code>Sum_fold#
+  (\a -&gt; False)
+  (\b -&gt; eq# b b_test)
+  (Sum_fold#
+    (\err -&gt; left# err)
+    (\val -&gt; right# (get_location# val))
+    scrutinee)</code></pre>
+<p>The expression above is not optimal. It’s not a constant though, and the scrutinee isn’t guaranteed to force a single branch either, so we can’t constant fold this expression or use the case of known constructor optimisation… if we look really closely though, we can see that scrutinising a second time isn’t actually required at all.</p>
+<p>We can justifiably rewrite this expression as:</p>
+<pre><code>Sum_fold#
+  (\err -&gt;
+    let a = err
+     in False)
+  (\val -&gt;
+    let b = get_location# val
+     in eq# b b_test)
+  scrutinee</code></pre>
+<p>The key insight here is that if we scrutinise the <code>scrutinee</code>, and find a <code>Right</code> value, we’re always going to exercise the <code>Right</code> case of the outer fold; and similarly for a <code>Left</code> case we know what side we’ll receive. <em>Both</em> sides of the expression are <em>irrefutably</em> going to be a <code>Right</code> value or a <code>Left</code> value, even though we don’t know what values they will hold.</p>
+<p>We can therefore skip the outer case expression, in what we call the <em>Case of Irrefutable Case</em> optimisation<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>.</p>
+<p>Restating what we saw above: if we <em>know</em> which cases both branches of the inner expression will produce, we don’t actually need to check them again.</p>
+<p>This function as implemented in our compiler is actually a little hairy, as it also sees through let bindings, handles other types of folds, and takes care of shadowing and renaming, so I won’t reproduce it here. Crucially though, it does not worry about recursion and tree traversal and reports progress to our fixpoint monad. We can therefore compose it with our constant fold and case of known constructor passes.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true"></a><span class="ot">simpExp ::</span> <span class="dt">Monad</span> m <span class="ot">=&gt;</span> <span class="dt">Exp</span> <span class="ot">-&gt;</span> <span class="dt">FixT</span> m <span class="dt">Exp</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true"></a>simpExp <span class="ot">=</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true"></a>  transformM transformations</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true"></a>    <span class="kw">where</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true"></a>  transformations</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true"></a>    <span class="ot">=</span>   constantFoldExp</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true"></a>    <span class="op">&gt;=&gt;</span> caseOfKnownConstructor</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true"></a>    <span class="op">&gt;=&gt;</span> caseOfIrrefutableCase</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true"></a>    <span class="op">&gt;=&gt;</span> inline</span></code></pre></div>
+<p><em>This insight is what makes our optimisations efficient.</em> We have a little bundle of optimisation functions which act in this manner, all apply to a single expression in the tree. By combining them here, at the single leaf or node, we can crunch individual leaves to their optimal state, before repeating the process for their parents. We can then do this process just a few times to reach a fixpoint. If we were to run each optimisation function independently leaf to root, we’d need to traverse the whole expression a lot more.</p>
+<p>Our whole <em>Core</em> optimisation pipeline, is essentially this:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true"></a><span class="ot">crunch ::</span> <span class="dt">Exp</span> <span class="ot">-&gt;</span> <span class="dt">Fresh</span> <span class="dt">Exp</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true"></a>crunch <span class="ot">=</span> fixpoint simpExp</span></code></pre></div>
+<p>And using it, we reduced code sizes by up to 70%, with a commensurate reduction in downstream compilation time and a healthy boost to our runtime performance.</p>
+<section class="footnotes" role="doc-endnotes">
+<hr />
+<ol>
+<li id="fn1" role="doc-endnote"><p>This is actually slightly simplified in that I’ve specialised or removed unnecessary type parameters. All of the case branches of <code>Exp</code> are present, while some folds and primitives are elided.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2" role="doc-endnote"><p>GHC, being a highly optimising compiler, has a similar optimisation called the <em>Case of Case</em> optimisation. The difference is that in GHC, the outer case expression is duplicated in its entirety. In the cases where we would do <em>our</em> optimisation, a case of known constructor would apply and reach the same result. Practically speaking, in GHC, some heuristics optimistically decide when to perform a <em>Case of Case</em>; while in Icicle, a <em>Case of Irrefutable Case</em> is always a good idea.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section>
+
+  </div>
+
+<!-- End Body
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+</body>
+</html>

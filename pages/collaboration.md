@@ -11,7 +11,7 @@ and want to look at how our customers are exploring our sites.
 We'll start with a simple model for a customer's interaction with
 a page. For this we define a record named `page_views` as input stream
 
-```
+```elm
 input page_views : {
     url : String
   , referrer: Option String
@@ -32,7 +32,7 @@ have any of the user's last 10 pages views been to the home screen;
 and what's the number of views for _sports_ in the past 4 weeks.
 
 They might write this as:
-```
+```elm
 feature viewed_homepage =
   from page_views
     in latest 10

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <title>Huw Campbell</title>
+    <link href="https://huwcampbell.com/atom.xml" rel="self" />
+    <link href="https://huwcampbell.com" />
+    <id>https://huwcampbell.com/atom.xml</id>
+    <author>
+        <name>Huw Campbell</name>
+        <email>huw@huwcampbell.com</email>
+    </author>
+    <updated>2023-05-20T00:00:00Z</updated>
+    <entry>
+    <title>Receiving Gifts – a Reflection Tutorial
+</title>
+    <link href="https://huwcampbell.com/posts/2023-05-20-receiving-gifts-a-reflection-tutorial.html" />
+    <id>https://huwcampbell.com/posts/2023-05-20-receiving-gifts-a-reflection-tutorial.html</id>
+    <published>2023-05-20T00:00:00Z</published>
+    <updated>2023-05-20T00:00:00Z</updated>
+    <summary type="html"><![CDATA[A Short Introduction to, and Explanation of, the Reflection Library]]></summary>
+</entry>
+<entry>
+    <title>Optimised Row Columnar for Haskell</title>
+    <link href="https://huwcampbell.com/posts/2020-09-18-announcing-orc-haskell.html" />
+    <id>https://huwcampbell.com/posts/2020-09-18-announcing-orc-haskell.html</id>
+    <published>2020-09-18T00:00:00Z</published>
+    <updated>2020-09-18T00:00:00Z</updated>
+    <summary type="html"><![CDATA[A new library for reading and writing Optimised Row Columnar files in native Haskell]]></summary>
+</entry>
+<entry>
+    <title>Traversals as Optimisations</title>
+    <link href="https://huwcampbell.com/posts/2020-09-04-traversals-for-optimisations.html" />
+    <id>https://huwcampbell.com/posts/2020-09-04-traversals-for-optimisations.html</id>
+    <published>2020-09-04T00:00:00Z</published>
+    <updated>2020-09-04T00:00:00Z</updated>
+    <summary type="html"><![CDATA[How traversals over our syntax tree help make optimisation passes simple and easy to maintain]]></summary>
+</entry>
+<entry>
+    <title>Ambling Through The Ice</title>
+    <link href="https://huwcampbell.com/posts/2020-09-01-ambling-through-the-ice.html" />
+    <id>https://huwcampbell.com/posts/2020-09-01-ambling-through-the-ice.html</id>
+    <published>2020-09-01T00:00:00Z</published>
+    <updated>2020-09-01T00:00:00Z</updated>
+    <summary type="html"><![CDATA[An soft introduction to Icicle]]></summary>
+</entry>
+
+</feed>

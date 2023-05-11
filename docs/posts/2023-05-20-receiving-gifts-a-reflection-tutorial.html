@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+  <!-- Basic Page Needs
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <meta charset="utf-8">
+  <title>Icicle Lang - Receiving Gifts – a Reflection Tutorial
+</title>
+  <meta name="description" content>
+  <meta name="author" content>
+
+  <!-- Mobile Specific Metas
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- FONT
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link href="https://fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+
+  <!-- CSS
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link rel="stylesheet" href="../css/normalize.css">
+  <link rel="stylesheet" href="../css/skeleton.css">
+  <link rel="stylesheet" href="../css/syntax.css">
+  <link rel="stylesheet" href="../css/custom.css">
+
+  <!-- Favicon
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link rel="icon" type="image/png" href="images/favicon.png">
+
+  <!-- ATOM Feed
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link href="../atom.xml" type="application/atom+xml" rel="alternate" title="ATOM Feed" />
+
+</head>
+<body>
+  <a href="https://github.com/icicle-lang/icicle" class="github-corner" aria-label="View source on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
+
+  <!-- Primary Body
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <div class="container">
+    <div class="three columns sidebar">
+        <nav>
+            <h3 id="logo">Icicle</h3>
+            <ul>
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="../archive.html">Archive</a></li>
+                <li><a href="../pages/about.html">About</a></li>
+                <li><a href="../pages/benchmarks.html">Benchmarks</a></li>
+                <li><a href="../pages/collaboration.html">Collaboration</a></li>
+            </ul>
+        </nav>
+        &nbsp;
+    </div>
+
+    <div class="nine columns content">
+        <h1>Receiving Gifts – a Reflection Tutorial
+</h1>
+
+        <div class="info">
+    Posted on May 20, 2023
+    
+        by Huw Campbell
+    
+</div>
+<br />
+
+<p>Haskell’s reflection library is a powerful tool to have in one’s belt, allowing the creation of <em>ad hoc</em> type classes informed at runtime; and as neat way of providing runtime configuration without the need for a monad stack.</p>
+<p>Internally though, it can be quite challenging to understand, as it can’t be represented in Haskell 98, and relies on knowledge of how GHC compiles Haskell type classes.</p>
+<h2 id="motivations">Motivations</h2>
+<p>A number of Haskell libraries use type classes as part of their API. Aeson for example has <code>FromJSON</code>, which describes how to parse json values into a particular type; and the avro library extensively uses <code>FromAvro</code>.</p>
+<p>Normally, this offers quite good ergonomics, but it can start to be problematic when parsing richer types like an Icicle <code>Value</code> (a value in our language). The issue is that the json or avro schemas for a <code>Value</code> may depend on its type in the Icicle type system, so we can’t infer all we need to know to parse a <code>Value</code> from its type alone.</p>
+<!--
+Here's a simplified snippet which we use to load Avro values with a given schema, the
+functions provided by the Schema registry library are based on a FromAvro instance,
+and it isn't ergonomically viable to pass simple functions to them.
+
+
+```haskell
+-- | Wrapper which holds the function to read a value into our type.
+newtype FromAvroDict a =
+  FromAvroDict {
+    fromAvro' :: Avro.Value -> Either String a
+  }
+
+-- | Use a given instance to instantiate a FromAvro instance.
+instance Given (FromAvroDict a) => Avro.FromAvro a where
+  fromAvro = fromAvro' given
+
+-- | Given an Icicle Schema, give an action which will parse
+--   bytestring encoded with a Confluent compatible encoder;
+--   and deconflicting using the schema registry.
+schemaRegistryDecoder
+  :: MonadIO m
+  => SchemaRegistry
+  -> Avro.TypeName
+  -> Icicle.Schema
+  -> Either SchemaEncodeError
+            (ByteString -> m (Either String Icicle.Value))
+schemaRegistryDecoder registry tn schema = do
+  avroSchema <-
+    encodeColumnSchema tn schema
+
+  -- The decodeWithSchema function uses a FromAvro instance
+  -- to know the reader schema for gathering information from
+  -- the Confluent schema registry. Here, we use give to
+  -- supply one.
+  return $ \payload ->
+    give (FromAvroDict (decodeValue schema)) $
+      decodeWithSchema registry avroSchema payload
+```
+ -->
+<p>As a separate motivation, we can solve “the configuration problem”, to quote <a href="https://www.joachim-breitner.de/blog/443-A_Solution_to_the_Configuration_Problem_in_Haskell">Joachim Breitner</a>, this is</p>
+<blockquote>
+<p>finding a convenient way to work with values that are initialized once and used in many places all over the code.</p>
+</blockquote>
+<p>We’ll start with the <code>Given</code> class, which is the little brother of <code>Reified</code>. It’s not nearly as safe, but it’s a good starting point for pedagogy.</p>
+<h2 id="given">Given</h2>
+<p>For the <code>Given</code> API, there are only two items exposed. There is the <code>Given</code> type class:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="kw">class</span> <span class="dt">Given</span> a <span class="kw">where</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true"></a><span class="ot">  given ::</span> a</span></code></pre></div>
+<p>and the API is complete with the function</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="ot">give ::</span> <span class="kw">forall</span> a r<span class="op">.</span> a <span class="ot">-&gt;</span> (<span class="dt">Given</span> a <span class="ot">=&gt;</span> r) <span class="ot">-&gt;</span> r</span></code></pre></div>
+<p>The <code>Given</code> type class can obviously just give a value of type <code>a</code> given an instance for the type, but here’s the thing: there <em>are no instances</em> for <code>Given</code>.</p>
+<p>Even though there are no instances for <code>Given</code>, the <code>give</code> function “magics” one up for us, which is then available for the inner continuation. This allows us to do really cool things!</p>
+<p>Firstly, we can solve our issue from above. If we can <code>give</code> a function with the type of <code>fromAvro</code> for our value type, and now use any API which requires a <code>FromAvro</code> instance.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="kw">instance</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a>  <span class="dt">Given</span> (<span class="dt">Avro.Value</span> <span class="ot">-&gt;</span> <span class="dt">Either</span> <span class="dt">String</span> <span class="dt">Icicle.Value</span>) <span class="ot">=&gt;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true"></a>    <span class="dt">Avro.FromAvro</span> <span class="dt">Icicle.Value</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true"></a>  <span class="kw">where</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true"></a>    fromAvro <span class="ot">=</span> given</span></code></pre></div>
+<p>And use functions which require a <code>FromAvro</code> instance.</p>
+<p>For the configuration problem: using a given, we can, for example, read environment and command line parameters, then call <code>give</code> with our parsed configuration. All that is required is we update type signatures on our internal functions with a <code>Given Configuration</code> constraint.</p>
+<h2 id="how-does-it-work">How Does it Work?</h2>
+<p>Haskell as defined can’t actually do <em>any</em> of this. All class instances must be specified at compile time and be coherent. So how does it actually work? To understand, we’ll need to know how newtypes and type classes are represented once we reach Haskell’s core language.</p>
+<p>In GHC, there are two forms of data declarations, <code>data</code> and <code>newtype</code>. Data declarations compile to something like structures, with pointers to haskell thunks; while newtypes don’t have any runtime overhead <em>at all</em>, they just compile to the wrapped data type.</p>
+<p>GHC, when faced with a type class constraint, will rewrite the function to take a dictionary function argument. These dictionary arguments look a lot like data declarations, so a function like this:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="fu">max</span><span class="ot"> ::</span> <span class="dt">Ord</span> a <span class="ot">=&gt;</span> [a] <span class="ot">-&gt;</span> a</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true"></a><span class="fu">max</span> as <span class="ot">=</span> <span class="fu">head</span> (<span class="fu">sort</span> as)</span></code></pre></div>
+<p>Will turn the one lambda into 3, one for the type variable <code>a</code>, one for the Ord dictionary for <code>a</code> and one for the actual arguments <code>as</code>. Here it is will a little bit of renaming:</p>
+<pre><code>max :: forall c. Ord c =&gt; [c] -&gt; c
+max = \(@ a_type) ($dOrd_A :: Ord a_type) (as :: [a_type]) -&gt;
+      head @ a_type (sort @ a_type $dOrd_A as)</code></pre>
+<p>Squinting, one should be able to see that the first lambda is the type for <code>a</code>; the next, named <code>$dOrd_A</code> is the dictionary for <code>Ord a</code>; and finally, we have the actual list of values. The other thing to note is that the arguments get passed along. So <code>head</code> receives 2 values, the type and the sorted list; while <code>sort</code> takes 3, including the type, dictionary, and original values.</p>
+<p>An interesting thing happens though with a type class like <code>Given</code>. Here, there is only a single term <code>give</code> in the typeclass. This means that it gets treated much more like a newtype than a data constructor, and therefore, instead of being wrapped behind a structure and thunk, it gets passed directly.</p>
+<p>As an example, here’s a simple function which adds 3 to a given integer:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a><span class="ot">adder ::</span> <span class="dt">Given</span> <span class="dt">Int</span> <span class="ot">=&gt;</span> <span class="dt">Int</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true"></a>adder <span class="ot">=</span> given <span class="op">+</span> <span class="dv">3</span></span></code></pre></div>
+<p>Looking at the core, we can see something interesting:</p>
+<pre><code>adder :: Given Int =&gt; Int
+adder = \($dGiven :: Given Int) -&gt;
+  (+)
+    @ Int
+    GHC.Num.$fNumInt
+    ($dGiven `cast` (Givens.N:Given[0] &lt;Int&gt;_N :: Given Int ~R# Int))
+    (GHC.Types.I# 3#)</code></pre>
+<p>the addition function is supplied 4 arguments, the type <code>@ Int</code>, as well as the dictionary for <code>Num Int</code>. The addition function is then applied to two more arguments: - the passed dictionary (after a cast) - and 3.</p>
+<p>That meaning, there’s no data constructor or extra boxing wrapping the <code>Given</code> value – and it looks more like a <code>newtype</code> to the compiler.</p>
+<p>This means that a function like</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true"></a><span class="ot">adder ::</span> <span class="dt">Given</span> <span class="dt">Int</span> <span class="ot">=&gt;</span> <span class="dt">Int</span></span></code></pre></div>
+<p>once it hits core, looks <em>exactly</em> like a function</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true"></a><span class="ot">add ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span></span></code></pre></div>
+<p>This is the critical optimisation which allows one to implement the <code>give</code> function. A newtype wrapper called <code>Gift</code> is used to hold on to the type class constraint, so its position in the generated Core can’t float to the outside of the give function.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true"></a><span class="kw">newtype</span> <span class="dt">Gift</span> a r <span class="ot">=</span> <span class="dt">Gift</span> (<span class="dt">Given</span> a <span class="ot">=&gt;</span> r)</span></code></pre></div>
+<p>This lets us write the <code>give</code> function, by acknowledging that this newtype has the same shape as the function <code>a -&gt; r</code> and using an <code>unsafeCoerce</code> to get GHC to accept this:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true"></a><span class="ot">give ::</span> <span class="kw">forall</span> a r<span class="op">.</span> a <span class="ot">-&gt;</span> (<span class="dt">Given</span> a <span class="ot">=&gt;</span> r) <span class="ot">-&gt;</span> r</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true"></a>give a k <span class="ot">=</span> unsafeCoerce (<span class="dt">Gift</span><span class="ot"> k ::</span> <span class="dt">Gift</span> a r) a</span></code></pre></div>
+<p>Now of course, <code>unsafeCoerce</code> is super dangerous and up to the mercy of the compiler, and indeed, whether this function is inlined has caused issues in the past. But the other big issue, which makes <code>Given</code> not ideal for most situations, is that there’s no reasonable way to say what will happen if two <code>give</code> calls are nested for the same type.</p>
+<h1 id="reified">Reified</h1>
+<p>The solution to this issue, is that instead of just one <code>Given</code> constraint, we use an infinite number of existentially quantified <code>Reified s</code> constraints. Where for each call to <code>reify</code>, we just make up a new type.</p>
+<p>The API looks like this:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true"></a><span class="kw">class</span> <span class="dt">Reifies</span> s a <span class="op">|</span> s <span class="ot">-&gt;</span> a <span class="kw">where</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true"></a><span class="ot">  reflect ::</span> proxy s <span class="ot">-&gt;</span> a</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true"></a>reify</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true"></a><span class="ot">  ::</span> <span class="kw">forall</span> a r<span class="op">.</span> a</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true"></a>  <span class="ot">-&gt;</span> (<span class="kw">forall</span> s<span class="op">.</span> <span class="dt">Reifies</span> s a <span class="ot">=&gt;</span> <span class="dt">Proxy</span> s <span class="ot">-&gt;</span> r)</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true"></a>  <span class="ot">-&gt;</span> r</span></code></pre></div>
+<p>Now this does look a bit funnier. The key is that within the function body passed to <code>reify</code>, the <code>s</code> type is existentially quantified, and the <code>s</code> types of two or more invocations can’t unify. If that sounds familiar, it might be because the same trick is used to isolate mutable state within the <code>ST</code> monad.</p>
+<p>To allow one to actually call <code>reflect</code> with the phantom type – a <code>Proxy s</code> value is provided.</p>
+<p>The implementation of <code>reify</code> is unsurprisingly very close to that of <code>give</code>, except the newtype wrapper is called <code>Magic</code>, and we have to also pass the <code>Proxy</code> arguments.</p>
+<p>Here it is in full:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true"></a><span class="kw">newtype</span> <span class="dt">Magic</span> a r <span class="ot">=</span> <span class="dt">Magic</span> (<span class="kw">forall</span> s<span class="op">.</span> <span class="dt">Reifies</span> s a <span class="ot">=&gt;</span> <span class="dt">Proxy</span> s <span class="ot">-&gt;</span> r)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true"></a><span class="co">-- | Reify a value at the type level, to be recovered with 'reflect'.</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true"></a>reify</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true"></a><span class="ot">  ::</span> <span class="kw">forall</span> a r<span class="op">.</span> a</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true"></a>  <span class="ot">-&gt;</span> (<span class="kw">forall</span> s<span class="op">.</span> <span class="dt">Reifies</span> s a <span class="ot">=&gt;</span> <span class="dt">Proxy</span> s <span class="ot">-&gt;</span> r)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true"></a>  <span class="ot">-&gt;</span> r</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true"></a>reify a k <span class="ot">=</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true"></a>  unsafeCoerce (<span class="dt">Magic</span><span class="ot"> k ::</span> <span class="dt">Magic</span> a r) (<span class="fu">const</span> a) <span class="dt">Proxy</span></span></code></pre></div>
+<p>The key is that the typeclass <code>Reifies</code> also has only one member, so acts just like its single function in core. The supplied value <code>a</code> is used as <code>const a</code> to ignore the extra <code>Proxy</code> argument passed.</p>
+<h1 id="history">History</h1>
+<p>That’s kind of the core of the current library, with the technique of exploiting the semantically identical Core representations from Ed Kmett.</p>
+<p>Originally the implementation from Oleg Kiselyov and Chung-chieh Shan was less efficient, but more critically couldn’t easily reflect functions, as the reified values had to be an instance of <code>Storable</code>. It’s an interesting paper to read, but isn’t required for understanding and using the library today.</p>
+
+  </div>
+
+<!-- End Body
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+</body>
+</html>

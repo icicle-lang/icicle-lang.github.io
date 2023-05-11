@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 import           Data.Semigroup
 import           Hakyll
-
+import           Hakyll.Process
 
 
 --------------------------------------------------------------------------------
@@ -11,6 +11,10 @@ main = hakyll $ do
     match ("images/*" .||. "js/*") $ do
         route   idRoute
         compile copyFileCompiler
+
+    match "dot/*.gv" $ do
+        route $ setExtension "svg"
+        compile $ execCompilerWith (execName "dot") [ProcArg "-Tsvg", HakFilePath] CStdOut
 
     match "css/*" $ do
         route   idRoute
@@ -21,6 +25,13 @@ main = hakyll $ do
 
         compile $ pandocCompiler
             >>= loadAndApplyTemplate "templates/default.html" defaultContext
+            >>= relativizeUrls
+
+    match "guide/*" $ do
+        route $ setExtension "html"
+
+        compile $ pandocCompiler
+            >>= loadAndApplyTemplate "templates/guide.html" (mathCtx <> defaultContext)
             >>= relativizeUrls
 
     match "posts/*" $ do

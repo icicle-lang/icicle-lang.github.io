@@ -2,9 +2,24 @@
 title: Benchmarks
 ---
 
-Icicle is fast. By compiling all queries to efficient C code, we can
-ensure that our queries perform well.
+Icicle is fast. By compiling all queries to efficient C code with
+unboxed data structures, we can ensure that our queries run efficiently.
 
+The benchmarks below are true, but also unfair to Icicle's performance.
+
+We thought of a set of queries which would be easy and possible to
+write in SQL, then wrote simple versions in Icicle, and optimised the
+daylights out of the SQL versions to get the results show below.
+
+It took about half an hour to write the Icicle, and many iterations to
+nut out the SQL.
+
+The thing is though, when we just gave the definitions for the queries
+we wanted to an engineer who hadn't been thinking about this problem
+for the past few years, they took 2 weeks to write the SQL to perform
+them, and they ran 1000x slower then our naïve Icicle version.
+
+## The Numbers
 
 We generated a small 5gb dataset of simulated supermarket basket data
 including:
@@ -20,7 +35,6 @@ by and join in all SQL engines.
 We ran these queries on Icicle on a single machine, as well as clusters
 of Redshift, Presto, and Spark; optimising all as best we could.
 
-The results were surprising:
 
 |                     | Icicle          | AWS Redshift | Apache Spark | Presto   |
 |---------------------|-----------------|--------------|--------------|----------|
@@ -31,6 +45,5 @@ The results were surprising:
 
 
 Icicle was simpler to write and faster. While our first iterations in SQL ran
-more than 10x slower than our optimised versions; we didn't touch our
+many times slower that our most optimised versions; we didn't touch our
 Icicle queries after they were first written.
-
