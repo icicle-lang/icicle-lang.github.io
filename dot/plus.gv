@@ -4,5 +4,5 @@ digraph finite_state_machine {
 	node [shape = doublecircle]; 1;
 	node [shape = circle];
 	0 -> 1 [ label = "a" ];
-	0 -> 0 [ label = "a", dir = back ];
+	1 -> 1 [ label = "a", dir = back ];
 }

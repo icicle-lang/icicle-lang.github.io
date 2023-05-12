@@ -77,3 +77,21 @@ let
 in
   book.acquired.year
 ```
+
+The way this works is that when dot syntax is used, the type
+checker emits a constraint
+
+```elm
+result =: HasField input x
+```
+
+Which can be read as
+
+> For all types 'input', the type 'input' must have a field
+> called "x", which in turn is of type 'result'.
+
+This can be satisfied if the type `input` is a record which
+does indeed have the field `x` of type `result`.
+
+Additional rules mean that the `time` type can satisfy this
+constrain for timely field names.

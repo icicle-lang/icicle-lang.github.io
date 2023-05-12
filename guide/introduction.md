@@ -2,9 +2,12 @@
 title: The Icicle Streaming Query Language Guide
 ---
 
-Icicle is a strongly typed pure query language that compiles to C.
-Icicle is designed to help businesses with their data science and marketing workflows;
-unify batch and streaming queries; supercharge collaboration within an organisation.
+This User Guide is a Work in Progress.
+
+Icicle is a strongly typed pure query language that compiles to C. The Icicle runtime
+provides both _batch_ and _streaming_ query execution exploiting the compiler code,
+and supports different file formats and querying aspects like snapshots or requesting
+particular entities at certain times.
 
 In this guide, you can learn:
 

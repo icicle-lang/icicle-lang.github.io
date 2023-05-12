@@ -6,8 +6,13 @@ import           Hakyll.Process
 
 
 --------------------------------------------------------------------------------
+config :: Configuration
+config = defaultConfiguration {
+    destinationDirectory = "docs"
+  }
+
 main :: IO ()
-main = hakyll $ do
+main = hakyllWith config $ do
     match ("images/*" .||. "js/*") $ do
         route   idRoute
         compile copyFileCompiler
@@ -31,7 +36,7 @@ main = hakyll $ do
         route $ setExtension "html"
 
         compile $ pandocCompiler
-            >>= loadAndApplyTemplate "templates/guide.html" (mathCtx <> defaultContext)
+            >>= loadAndApplyTemplate "templates/default.html" (mathCtx <> defaultContext)
             >>= relativizeUrls
 
     match "posts/*" $ do
@@ -49,17 +54,17 @@ main = hakyll $ do
             >>= relativizeUrls
 
 
-    create ["archive.html"] $ do
+    create ["developer-blog.html"] $ do
         route idRoute
         compile $ do
             posts <- recentFirst =<< loadAll "posts/*"
             let archiveCtx =
                     listField "posts" postCtx (return posts) `mappend`
-                    constField "title" "Archives"            `mappend`
+                    constField "title" "Developer Blog"      `mappend`
                     defaultContext
 
             makeItem ""
-                >>= loadAndApplyTemplate "templates/archive.html" archiveCtx
+                >>= loadAndApplyTemplate "templates/developer-blog.html" archiveCtx
                 >>= loadAndApplyTemplate "templates/default.html" archiveCtx
                 >>= relativizeUrls
 

@@ -41,17 +41,23 @@
   <div class="container">
     <div class="three columns sidebar">
         <nav>
+            <h3 id="logo">Icicle</h3>
+            <ul>
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="../developer-blog.html">Developer Blog</a></li>
+                <li><a href="../pages/about.html">About</a></li>
+                <li><a href="../pages/benchmarks.html">Benchmarks</a></li>
+                <li><a href="../pages/collaboration.html">Collaboration</a></li>
+            </ul>
+
             <h3 id="logo">Guide</h3>
             <ul>
                 <li><a href="../guide/introduction.html">Introduction</a></li>
                 <li><a href="../guide/syntax.html">Syntax</a></li>
                 <li><a href="../guide/contexts.html">Contexts</a></li>
+                <li><a href="../guide/types.html">Types</a></li>
+                <li><a href="../guide/modalities.html">Modalities</a></li>
                 <li><a href="../guide/records.html">Records</a></li>
-            </ul>
-
-            <h4 id="logo">Icicle</h4>
-            <ul>
-              <li><a href="../index.html">Home</a></li>
             </ul>
 
         </nav>
@@ -63,10 +69,10 @@
 
         <p>Icicle has a small syntax, designed to look like simple functional languages. It’s whitespace sensitive (a bit like python) and is designed to be concise and clear.</p>
 <h2 id="comments">Comments</h2>
-<div class="sourceCode" id="cb1"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="co">-- a single line comment</span></span>
+<div class="sourceCode" id="cb1"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="co">-- single line comments start with two dashes</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true"></a></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true"></a><span class="co">{- a multiline comment</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true"></a><span class="co">   {- can be nested -}</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true"></a><span class="co">{- multiline comments are done like this</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true"></a><span class="co">   {- and can be nested -}</span></span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true"></a><span class="co">-}</span></span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true"></a></span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true"></a><span class="dt">True</span> <span class="co">-- It's true, comments can come after expressions</span></span>
@@ -83,91 +89,98 @@
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true"></a></span>
 <span id="cb2-9"><a href="#cb2-9" aria-hidden="true"></a><span class="st">&quot;one&quot;</span>      : <span class="dt">String</span></span>
 <span id="cb2-10"><a href="#cb2-10" aria-hidden="true"></a><span class="dv">2020</span><span class="op">-</span><span class="dv">01</span><span class="op">-</span><span class="dv">01</span> : <span class="dt">Time</span></span></code></pre></div>
+<h2 id="constructors">Constructors</h2>
+<p>Some simple sum types are baked in (while others can be created by users).</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="dt">Some</span> <span class="st">&quot;work&quot;</span> : <span class="dt">Option</span> <span class="dt">String</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a><span class="dt">None</span>        : <span class="dt">Option</span> <span class="fu">a</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true"></a><span class="dt">Left</span> <span class="st">&quot;hi&quot;</span>   : <span class="dt">Sum</span> <span class="dt">String</span> <span class="fu">b</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true"></a><span class="dt">Right</span> <span class="st">&quot;ok&quot;</span>  : <span class="dt">Sum</span> <span class="fu">c</span> <span class="dt">String</span></span></code></pre></div>
 <h2 id="function-application">Function Application</h2>
 <p>Applying functions has a very minimal syntax, just whitespace is used to separate a function from their arguments.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="co">-- apply the sum function to the argument amount</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a><span class="fu">sum</span> <span class="fu">amount</span></span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="co">-- apply the sum function to the argument amount</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true"></a><span class="fu">sum</span> <span class="fu">amount</span></span></code></pre></div>
 <p>To apply to multiple arguments, just use another space</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="co">-- max_by takes two arguments</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true"></a><span class="fu">max_by</span> <span class="fu">total_sales</span> <span class="fu">store</span></span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="co">-- max_by takes two arguments</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true"></a><span class="fu">max_by</span> <span class="fu">total_sales</span> <span class="fu">store</span></span></code></pre></div>
 <h2 id="branching-on-conditionals">Branching on Conditionals</h2>
 <p>The simplest conditional is an if expression</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="cf">if</span> <span class="fu">value</span> <span class="op">&gt;</span> <span class="dv">10</span> <span class="cf">then</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true"></a>  <span class="dt">Some</span> <span class="fu">value</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true"></a><span class="cf">else</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true"></a>  <span class="dt">None</span></span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a><span class="cf">if</span> <span class="fu">value</span> <span class="op">&gt;</span> <span class="dv">10</span> <span class="cf">then</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true"></a>  <span class="dt">Some</span> <span class="fu">value</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true"></a><span class="cf">else</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true"></a>  <span class="dt">None</span></span></code></pre></div>
 <p>You can also pattern match on expressions</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a><span class="cf">case</span> <span class="fu">total</span> <span class="cf">of</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true"></a>  <span class="dt">Some</span> <span class="fu">value</span> <span class="cf">then</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true"></a>    <span class="fu">value</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true"></a>  <span class="dt">None</span> <span class="cf">then</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true"></a>    <span class="dv">0</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true"></a><span class="cf">case</span> <span class="fu">total</span> <span class="cf">of</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true"></a>  <span class="dt">Some</span> <span class="fu">value</span> <span class="cf">then</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true"></a>    <span class="fu">value</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true"></a>  <span class="dt">None</span> <span class="cf">then</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true"></a>    <span class="dv">0</span></span></code></pre></div>
 <h2 id="let-expressions">Let Expressions</h2>
 <p>Let expressions provide a simple context under which a new name is available.</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true"></a><span class="kw">let</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true"></a>  <span class="fu">total</span> <span class="op">=</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true"></a>    <span class="fu">sum</span> <span class="fu">value</span></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true"></a></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true"></a>  <span class="fu">number</span> <span class="op">=</span></span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true"></a>    <span class="fu">count</span> <span class="fu">value</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true"></a></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true"></a><span class="kw">in</span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true"></a>  <span class="fu">total</span> <span class="op">/</span> <span class="fu">number</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true"></a><span class="kw">let</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true"></a>  <span class="fu">total</span> <span class="op">=</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true"></a>    <span class="fu">sum</span> <span class="fu">value</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true"></a>  <span class="fu">number</span> <span class="op">=</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true"></a>    <span class="fu">count</span> <span class="fu">value</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true"></a></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true"></a><span class="kw">in</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true"></a>  <span class="fu">total</span> <span class="op">/</span> <span class="fu">number</span></span></code></pre></div>
 <p>One doesn’t usually need to put semi-colons between expressions in a let statement, just line them up vertically. But, if it’s nicer to put them on a single line one can explicitly separate them</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true"></a><span class="kw">let</span> <span class="fu">a</span> <span class="op">=</span> <span class="dv">2</span>; <span class="fu">b</span> <span class="op">=</span> <span class="dv">3</span> <span class="kw">in</span> <span class="fu">a</span> <span class="op">+</span> <span class="fu">b</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true"></a><span class="kw">let</span> <span class="fu">a</span> <span class="op">=</span> <span class="dv">2</span>; <span class="fu">b</span> <span class="op">=</span> <span class="dv">3</span> <span class="kw">in</span> <span class="fu">a</span> <span class="op">+</span> <span class="fu">b</span></span></code></pre></div>
 <p>Let expressions are the simplest contexts, but others are critical too, including filters, folds, windows, and group bys.</p>
 <h2 id="function-definitions">Function Definitions</h2>
 <p>Users can trivially write helper functions and custom folds to make writing queries easier.</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true"></a><span class="fu">mean</span> <span class="fu">a</span> <span class="op">=</span> <span class="fu">sum</span> <span class="fu">a</span> <span class="op">/</span> <span class="fu">count</span> <span class="fu">a</span></span></code></pre></div>
-<p>The arguments which must be provided to <code>mean</code> here are specified before the equals sign (i.e., a), and are available in the body of the function.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true"></a><span class="fu">mean</span> <span class="fu">a</span> <span class="op">=</span> <span class="fu">sum</span> <span class="fu">a</span> <span class="op">/</span> <span class="fu">count</span> <span class="fu">a</span></span></code></pre></div>
+<p>The arguments which must be provided to <code>mean</code> here are specified before the equals sign (i.e., <code>a</code>), and are available in the body of the function.</p>
 <h2 id="type-signatures">Type Signatures</h2>
 <p>Type signatures are never required when writing features, but can be used to document and check functions. Type signatures come after a single colon.</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true"></a><span class="fu">three</span> : <span class="dt">Int</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true"></a><span class="fu">three</span> <span class="op">=</span> <span class="dv">3</span></span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true"></a><span class="fu">three</span> : <span class="dt">Int</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true"></a><span class="fu">three</span> <span class="op">=</span> <span class="dv">3</span></span></code></pre></div>
 <p>Function types include arrows between their arguments to their result.</p>
-<div class="sourceCode" id="cb11"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true"></a><span class="fu">add</span> : <span class="dt">Int</span> <span class="op">-&gt;</span> <span class="dt">Int</span> <span class="op">-&gt;</span> <span class="dt">Int</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true"></a><span class="fu">add</span> <span class="fu">a</span> <span class="fu">b</span> <span class="op">=</span> <span class="fu">a</span> <span class="op">+</span> <span class="fu">b</span></span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true"></a><span class="fu">add</span> : <span class="dt">Int</span> <span class="op">-&gt;</span> <span class="dt">Int</span> <span class="op">-&gt;</span> <span class="dt">Int</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true"></a><span class="fu">add</span> <span class="fu">a</span> <span class="fu">b</span> <span class="op">=</span> <span class="fu">a</span> <span class="op">+</span> <span class="fu">b</span></span></code></pre></div>
 <p>Types which start with a capital letter are fixed types, while those with a lower case letter are polymorphic types, meaning the caller of the function can decide what type to use.</p>
-<div class="sourceCode" id="cb12"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true"></a><span class="fu">identity</span> : <span class="fu">a</span> <span class="op">-&gt;</span> <span class="fu">a</span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true"></a><span class="fu">identity</span> <span class="fu">a</span> <span class="op">=</span> <span class="fu">a</span></span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true"></a><span class="fu">identity</span> : <span class="fu">a</span> <span class="op">-&gt;</span> <span class="fu">a</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true"></a><span class="fu">identity</span> <span class="fu">a</span> <span class="op">=</span> <span class="fu">a</span></span></code></pre></div>
 <p>The function identity simply returns the value passed to it, and can be passed a value of any type.</p>
 <p>Some types may also contain constraints on the types which can inhabit them</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true"></a><span class="fu">four</span> : <span class="dt">Num</span> <span class="fu">a</span> <span class="op">=&gt;</span> <span class="fu">a</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true"></a><span class="fu">four</span> <span class="op">=</span> <span class="dv">4</span></span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true"></a><span class="fu">four</span> : <span class="dt">Num</span> <span class="fu">a</span> <span class="op">=&gt;</span> <span class="fu">a</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true"></a><span class="fu">four</span> <span class="op">=</span> <span class="dv">4</span></span></code></pre></div>
 <p>The above can be read as</p>
 <blockquote>
 <p>for all types ‘a’, given that ‘a’ is a number; four is a value of type ‘a’</p>
 </blockquote>
 <h2 id="input-definitions">Input Definitions</h2>
 <p>Streams of data are required to have their type defined. Any type of data is available, including complex records. When a record is used as an input, the fields of the record are bound to names automatically.</p>
-<div class="sourceCode" id="cb14"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true"></a><span class="fu">input</span> <span class="fu">age</span> : <span class="dt">Int</span></span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true"></a><span class="fu">input</span> <span class="fu">age</span> : <span class="dt">Int</span></span></code></pre></div>
 <h2 id="building-queries">Building Queries</h2>
 <p>Queries start with their name, and the data source which will be queried</p>
-<div class="sourceCode" id="cb15"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true"></a><span class="fu">feature</span> <span class="fu">total_sales</span> <span class="op">=</span></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true"></a>  <span class="fu">from</span> <span class="fu">sales</span></span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true"></a>    <span class="kw">in</span> <span class="fu">sum</span> <span class="fu">amount</span></span></code></pre></div>
+<div class="sourceCode" id="cb16"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true"></a><span class="fu">feature</span> <span class="fu">total_sales</span> <span class="op">=</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true"></a>  <span class="fu">from</span> <span class="fu">sales</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true"></a>    <span class="kw">in</span> <span class="fu">sum</span> <span class="fu">amount</span></span></code></pre></div>
 <h2 id="modules">Modules</h2>
 <p>Modules are used to separate files and allow collaboration. Modules can contain imports (which must come first), input declarations, function definitions, type definitions, and features.</p>
-<div class="sourceCode" id="cb16"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true"></a><span class="kw">module</span> <span class="dt">Age</span> <span class="kw">where</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true"></a></span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true"></a><span class="kw">import</span> <span class="dt">Helpers</span></span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true"></a></span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true"></a><span class="kw">type</span> <span class="dt">Adult</span></span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true"></a>  <span class="op">=</span> <span class="dt">Adult</span> ()</span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true"></a>  <span class="op">|</span> <span class="dt">Child</span> ()</span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true"></a></span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true"></a><span class="fu">input</span> <span class="fu">age</span> : <span class="dt">Int</span></span>
-<span id="cb16-10"><a href="#cb16-10" aria-hidden="true"></a></span>
-<span id="cb16-11"><a href="#cb16-11" aria-hidden="true"></a><span class="fu">adult</span> : <span class="dt">Int</span> <span class="op">-&gt;</span> <span class="dt">Adult</span></span>
-<span id="cb16-12"><a href="#cb16-12" aria-hidden="true"></a><span class="fu">adult</span> <span class="fu">i</span> <span class="op">=</span></span>
-<span id="cb16-13"><a href="#cb16-13" aria-hidden="true"></a>  <span class="cf">if</span> <span class="fu">i</span> <span class="op">&gt;=</span> <span class="dv">18</span> <span class="cf">then</span></span>
-<span id="cb16-14"><a href="#cb16-14" aria-hidden="true"></a>    <span class="dt">Adult</span> ()</span>
-<span id="cb16-15"><a href="#cb16-15" aria-hidden="true"></a>  <span class="cf">else</span></span>
-<span id="cb16-16"><a href="#cb16-16" aria-hidden="true"></a>    <span class="dt">Child</span> ()</span>
-<span id="cb16-17"><a href="#cb16-17" aria-hidden="true"></a></span>
-<span id="cb16-18"><a href="#cb16-18" aria-hidden="true"></a><span class="fu">feature</span> <span class="fu">is_adult</span> <span class="op">=</span></span>
-<span id="cb16-19"><a href="#cb16-19" aria-hidden="true"></a>  <span class="fu">from</span> <span class="fu">age</span></span>
-<span id="cb16-20"><a href="#cb16-20" aria-hidden="true"></a>    <span class="kw">in</span> <span class="fu">adult</span> (<span class="fu">newest</span> <span class="fu">value</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb17"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true"></a><span class="kw">module</span> <span class="dt">Age</span> <span class="kw">where</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true"></a></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true"></a><span class="kw">import</span> <span class="dt">Helpers</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true"></a></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true"></a><span class="kw">type</span> <span class="dt">Adult</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true"></a>  <span class="op">=</span> <span class="dt">Adult</span> ()</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true"></a>  <span class="op">|</span> <span class="dt">Child</span> ()</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true"></a></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true"></a><span class="fu">input</span> <span class="fu">age</span> : <span class="dt">Int</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true"></a></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true"></a><span class="fu">adult</span> : <span class="dt">Int</span> <span class="op">-&gt;</span> <span class="dt">Adult</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true"></a><span class="fu">adult</span> <span class="fu">i</span> <span class="op">=</span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true"></a>  <span class="cf">if</span> <span class="fu">i</span> <span class="op">&gt;=</span> <span class="dv">18</span> <span class="cf">then</span></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true"></a>    <span class="dt">Adult</span> ()</span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true"></a>  <span class="cf">else</span></span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true"></a>    <span class="dt">Child</span> ()</span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true"></a></span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true"></a><span class="fu">feature</span> <span class="fu">is_adult</span> <span class="op">=</span></span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true"></a>  <span class="fu">from</span> <span class="fu">age</span></span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true"></a>    <span class="kw">in</span> <span class="fu">adult</span> (<span class="fu">newest</span> <span class="fu">value</span>)</span></code></pre></div>
   </div>
 
 <!-- End Body

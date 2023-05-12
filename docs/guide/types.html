@@ -5,7 +5,7 @@
   <!-- Basic Page Needs
   –––––––––––––––––––––––––––––––––––––––––––––––––– -->
   <meta charset="utf-8">
-  <title>Icicle Lang - The Icicle Streaming Query Language Guide</title>
+  <title>Icicle Lang - Types</title>
   <meta name="description" content>
   <meta name="author" content>
 
@@ -65,20 +65,13 @@
     </div>
 
     <div class="nine columns content">
-        <h1>The Icicle Streaming Query Language Guide</h1>
+        <h1>Types</h1>
 
-        <p>This User Guide is a Work in Progress.</p>
-<p>Icicle is a strongly typed pure query language that compiles to C. The Icicle runtime provides both <em>batch</em> and <em>streaming</em> query execution exploiting the compiler code, and supports different file formats and querying aspects like snapshots or requesting particular entities at certain times.</p>
-<p>In this guide, you can learn:</p>
-<ul>
-<li>How to install Icicle and set up a basic test environment;</li>
-<li>How to use the Icicle repl to quickly figure out queries;</li>
-<li>Event sourcing concepts and practice;</li>
-<li>How the type system and modern programming techniques can help you model a domain;</li>
-<li>How the Icicle module system enables collaboration; and</li>
-<li>When and why to use Icicle vs other technologies.</li>
-</ul>
-<p>Using Icicle can be a bit different to using SQL and other tools for one’s data engineering workflows. Icicle covers off a lot of the boilerplate that is required for writing SQL, and, by starting with a different data model: streams of events vs multisets – Icicle makes a huge variety of queries far easier to write and faster to execute.</p>
+        <p>Icicle’s has a principled type system, meaning that every expression in the language is both able to be inferred, and has a single most general type.</p>
+<p>In practice, this means that type annotations are <em>never</em> required.</p>
+<p>Icicle support basic types, such as <code>Int</code>, <code>Double</code>, <code>String</code>, and <code>Bool</code>, as well as more exotic types, such as <code>Unit</code>, <code>Time</code>, <code>Option</code>, and <code>Either</code>.</p>
+<p>It is also possible to create your own tuple and record types, as well as custom types.</p>
+<p>The Icicle type system also includes modalities, which are covered in the next section of this guide.</p>
   </div>
 
 <!-- End Body

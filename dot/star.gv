@@ -3,6 +3,5 @@ digraph finite_state_machine {
 	size="8,5"
 	node [shape = doublecircle]; 0;
 	node [shape = circle];
-	0 -> 1 [ label = "a" ];
 	0 -> 0 [ label = "a", dir = back ];
 }

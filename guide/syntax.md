@@ -10,10 +10,10 @@ Comments
 --------
 
 ```elm
--- a single line comment
+-- single line comments start with two dashes
 
-{- a multiline comment
-   {- can be nested -}
+{- multiline comments are done like this
+   {- and can be nested -}
 -}
 
 True -- It's true, comments can come after expressions
@@ -37,6 +37,21 @@ False      : Bool
 "one"      : String
 2020-01-01 : Time
 ```
+
+Constructors
+------------
+
+Some simple sum types are baked in (while others can be
+created by users).
+
+```elm
+Some "work" : Option String
+None        : Option a
+
+Left "hi"   : Sum String b
+Right "ok"  : Sum c String
+```
+
 
 Function Application
 --------------------
@@ -120,7 +135,7 @@ mean a = sum a / count a
 ```
 
 The arguments which must be provided to `mean` here are specified
-before the equals sign (i.e., a), and are available in the body
+before the equals sign (i.e., `a`), and are available in the body
 of the function.
 
 

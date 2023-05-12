@@ -41,17 +41,23 @@
   <div class="container">
     <div class="three columns sidebar">
         <nav>
+            <h3 id="logo">Icicle</h3>
+            <ul>
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="../developer-blog.html">Developer Blog</a></li>
+                <li><a href="../pages/about.html">About</a></li>
+                <li><a href="../pages/benchmarks.html">Benchmarks</a></li>
+                <li><a href="../pages/collaboration.html">Collaboration</a></li>
+            </ul>
+
             <h3 id="logo">Guide</h3>
             <ul>
                 <li><a href="../guide/introduction.html">Introduction</a></li>
                 <li><a href="../guide/syntax.html">Syntax</a></li>
                 <li><a href="../guide/contexts.html">Contexts</a></li>
+                <li><a href="../guide/types.html">Types</a></li>
+                <li><a href="../guide/modalities.html">Modalities</a></li>
                 <li><a href="../guide/records.html">Records</a></li>
-            </ul>
-
-            <h4 id="logo">Icicle</h4>
-            <ul>
-              <li><a href="../index.html">Home</a></li>
             </ul>
 
         </nav>
@@ -106,6 +112,14 @@
 <span id="cb4-7"><a href="#cb4-7" aria-hidden="true"></a>    }</span>
 <span id="cb4-8"><a href="#cb4-8" aria-hidden="true"></a><span class="kw">in</span></span>
 <span id="cb4-9"><a href="#cb4-9" aria-hidden="true"></a>  <span class="fu">book</span><span class="op">.</span><span class="fu">acquired</span><span class="op">.</span><span class="fu">year</span></span></code></pre></div>
+<p>The way this works is that when dot syntax is used, the type checker emits a constraint</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="fu">result</span> <span class="op">=</span>: <span class="dt">HasField</span> <span class="fu">input</span> <span class="fu">x</span></span></code></pre></div>
+<p>Which can be read as</p>
+<blockquote>
+<p>For all types ‘input’, the type ‘input’ must have a field called “x”, which in turn is of type ‘result’.</p>
+</blockquote>
+<p>This can be satisfied if the type <code>input</code> is a record which does indeed have the field <code>x</code> of type <code>result</code>.</p>
+<p>Additional rules mean that the <code>time</code> type can satisfy this constrain for timely field names.</p>
   </div>
 
 <!-- End Body

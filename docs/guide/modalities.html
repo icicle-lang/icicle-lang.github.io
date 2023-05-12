@@ -5,7 +5,7 @@
   <!-- Basic Page Needs
   –––––––––––––––––––––––––––––––––––––––––––––––––– -->
   <meta charset="utf-8">
-  <title>Icicle Lang - Archives</title>
+  <title>Icicle Lang - Modalities</title>
   <meta name="description" content>
   <meta name="author" content>
 
@@ -19,10 +19,10 @@
 
   <!-- CSS
   –––––––––––––––––––––––––––––––––––––––––––––––––– -->
-  <link rel="stylesheet" href="./css/normalize.css">
-  <link rel="stylesheet" href="./css/skeleton.css">
-  <link rel="stylesheet" href="./css/syntax.css">
-  <link rel="stylesheet" href="./css/custom.css">
+  <link rel="stylesheet" href="../css/normalize.css">
+  <link rel="stylesheet" href="../css/skeleton.css">
+  <link rel="stylesheet" href="../css/syntax.css">
+  <link rel="stylesheet" href="../css/custom.css">
 
   <!-- Favicon
   –––––––––––––––––––––––––––––––––––––––––––––––––– -->
@@ -30,7 +30,7 @@
 
   <!-- ATOM Feed
   –––––––––––––––––––––––––––––––––––––––––––––––––– -->
-  <link href="./atom.xml" type="application/atom+xml" rel="alternate" title="ATOM Feed" />
+  <link href="../atom.xml" type="application/atom+xml" rel="alternate" title="ATOM Feed" />
 
 </head>
 <body>
@@ -43,43 +43,47 @@
         <nav>
             <h3 id="logo">Icicle</h3>
             <ul>
-                <li><a href="./index.html">Home</a></li>
-                <li><a href="./archive.html">Archive</a></li>
-                <li><a href="./pages/about.html">About</a></li>
-                <li><a href="./pages/benchmarks.html">Benchmarks</a></li>
-                <li><a href="./pages/collaboration.html">Collaboration</a></li>
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="../developer-blog.html">Developer Blog</a></li>
+                <li><a href="../pages/about.html">About</a></li>
+                <li><a href="../pages/benchmarks.html">Benchmarks</a></li>
+                <li><a href="../pages/collaboration.html">Collaboration</a></li>
             </ul>
+
+            <h3 id="logo">Guide</h3>
+            <ul>
+                <li><a href="../guide/introduction.html">Introduction</a></li>
+                <li><a href="../guide/syntax.html">Syntax</a></li>
+                <li><a href="../guide/contexts.html">Contexts</a></li>
+                <li><a href="../guide/types.html">Types</a></li>
+                <li><a href="../guide/modalities.html">Modalities</a></li>
+                <li><a href="../guide/records.html">Records</a></li>
+            </ul>
+
         </nav>
         &nbsp;
     </div>
 
     <div class="nine columns content">
-        <h1>Archives</h1>
+        <h1>Modalities</h1>
 
-        Here you can find all my previous posts:
-
-<ul>
-    
-        <li>
-            <a href="./posts/2023-05-20-receiving-gifts-a-reflection-tutorial.html">Receiving Gifts – a Reflection Tutorial
-</a> - May 20, 2023
-        </li>
-    
-        <li>
-            <a href="./posts/2020-09-18-announcing-orc-haskell.html">Optimised Row Columnar for Haskell</a> - September 18, 2020
-        </li>
-    
-        <li>
-            <a href="./posts/2020-09-04-traversals-for-optimisations.html">Traversals as Optimisations</a> - September  4, 2020
-        </li>
-    
-        <li>
-            <a href="./posts/2020-09-01-ambling-through-the-ice.html">Ambling Through The Ice</a> - September  1, 2020
-        </li>
-    
-</ul>
-
-
+        <p>Icicle’s has a principled type system, meaning that every expression in the language is both able to be inferred, and has a single most general type.</p>
+<p>What this means in practice is that no expressions need type annotations, and if queries make logical sense, they’ll type check without any extra work from the programmer.</p>
+<p>One critical component of Icicle is its Modal type system, which is used to ensure streaming runtime characteristics for queries as well as track error conditions.</p>
+<p>Modal type system stem from Modal Logic<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a> and allow Icicle expressions to allow to have a simple syntax while still ensuring the streaming properties of queries.</p>
+<p>Modal types qualify proof terms, so we can propose that the result of a division is <code>Possibly Double</code>. Icicle uses modalities for error conditions, as well as, when in the computation a variable is available. Elements of the input are tracked as <code>Element</code>, while at the end, all values must be <code>Aggregate</code> or <code>Pure</code>.</p>
+<p>Application through modalities is implicit, so operators like <code>+</code> will work for all modes, but not necessarily their combinations; as adding an <code>Element</code> to an <code>Aggregate</code> is forbidden.</p>
+<p>The key type error one will see with regards to modalities is this:</p>
+<pre><code>Cannot join temporalities.
+Element with Aggregate.
+Chances are the query requires multiple passes over the data.</code></pre>
+<p>Which means that the modal type system has been violated, and the query doesn’t make sense to perform in a single pass over the data.</p>
+<section class="footnotes" role="doc-endnotes">
+<hr />
+<ol>
+<li id="fn1" role="doc-endnote"><p><a href="https://en.wikipedia.org/wiki/Modal_Logic">Wikipedia Modal_Logic</a><a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section>
   </div>
 
 <!-- End Body
