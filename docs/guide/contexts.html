@@ -96,44 +96,63 @@
 <span id="cb2-13"><a href="#cb2-13" aria-hidden="true"></a>  <span class="kw">in</span></span>
 <span id="cb2-14"><a href="#cb2-14" aria-hidden="true"></a>    <span class="fu">numerator</span> <span class="op">/</span> <span class="fu">denominator</span></span></code></pre></div>
 <p>Returning an <em>element</em> from a filter expression is not valid, because downstream calculations wouldn’t be able to line up between different streams if a function were to be applied.</p>
+<h3 id="filter-let">Filter Let</h3>
+<p>The <em>filter let</em> context binds a partial pattern to filter a stream before calculating an aggregate, combining the characteristics of the preceding two contexts.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="fu">sum_options</span> : <span class="dt">Element</span> (<span class="dt">Option</span> <span class="dt">Int</span>) <span class="op">-&gt;</span> <span class="dt">Aggregate</span> <span class="dt">Int</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a><span class="fu">sum_options</span> <span class="fu">optNum</span> <span class="op">=</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true"></a>  <span class="fu">filter</span> <span class="kw">let</span> <span class="dt">Some</span> <span class="fu">num</span> <span class="op">=</span> <span class="fu">optNum</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true"></a>  <span class="kw">in</span> <span class="fu">sum</span> <span class="fu">num</span></span></code></pre></div>
+<p>Like <em>filter</em>, returning an <em>element</em> within the context of a <em>filter let</em> expression is a type error.</p>
 <h3 id="window">Window</h3>
 <p>Window is a specialised filter which only permits facts which occurred within a specific time window.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="co">-- Days</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a><span class="fu">windowed</span> <span class="dv">14</span> <span class="fu">days</span> <span class="kw">in</span> <span class="fu">sum</span> <span class="fu">amount</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true"></a><span class="co">-- Weeks</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true"></a><span class="fu">windowed</span> <span class="dv">2</span> <span class="fu">weeks</span> <span class="kw">in</span> <span class="fu">sum</span> <span class="fu">amount</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true"></a><span class="co">-- Months</span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true"></a><span class="fu">windowed</span> <span class="dv">1</span> <span class="fu">month</span> <span class="kw">in</span> <span class="fu">sum</span> <span class="fu">amount</span></span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="co">-- Days</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true"></a><span class="fu">windowed</span> <span class="dv">14</span> <span class="fu">days</span> <span class="kw">in</span> <span class="fu">sum</span> <span class="fu">amount</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true"></a><span class="co">-- Weeks</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true"></a><span class="fu">windowed</span> <span class="dv">2</span> <span class="fu">weeks</span> <span class="kw">in</span> <span class="fu">sum</span> <span class="fu">amount</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true"></a><span class="co">-- Months</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true"></a><span class="fu">windowed</span> <span class="dv">1</span> <span class="fu">month</span> <span class="kw">in</span> <span class="fu">sum</span> <span class="fu">amount</span></span></code></pre></div>
 <p>These are extremely useful for feature engineering tasks.</p>
 <h3 id="latest">Latest</h3>
 <p>The <em>latest</em> contexts allows on to compute a downstream aggregation on a limited number of values which were the most recent to arrive.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="fu">latest</span> <span class="dv">10</span> <span class="kw">in</span> <span class="fu">sum</span> <span class="fu">amount</span></span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="fu">latest</span> <span class="dv">10</span> <span class="kw">in</span> <span class="fu">sum</span> <span class="fu">amount</span></span></code></pre></div>
 <p>Latests are implemented as circular buffers, holding only the required parts of input.</p>
 <h3 id="group">Group</h3>
 <p>The Group context allows one to create a map of results, with keys specified by the grouping context.</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="fu">group</span> <span class="fu">key</span> <span class="kw">in</span> <span class="fu">aggregate</span> <span class="fu">elements</span></span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a><span class="fu">group</span> <span class="fu">key</span> <span class="kw">in</span> <span class="fu">aggregate</span> <span class="fu">elements</span></span></code></pre></div>
 <p>within the context, an <em>aggregate</em> must be returned, while the key must be a streaming <em>element</em> expression. Any calculation which produces an aggregate is permitted inside a <em>group</em> expression, providing a lot of flexibility.</p>
 <h3 id="fold">Fold</h3>
 <p>The <em>fold</em> context is the key to aggregating data, and all functions producing <em>aggregate</em> values, such as <em>sum</em> and <em>count</em>, are implemented using this user facing language feature.</p>
 <p>Folds are a programming concept similar to the <em>reduce</em> in other languages, which, given some initial state, (sometimes called the accumulator), will update its state as new data points are provided. When all the data has been seen, we can know the final state of the system.</p>
 <p>Here’s how one could defined a <em>sum</em> expression, similar to how it is defined in the Icicle standard library.</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a><span class="fu">sum</span> : <span class="dt">Element</span> <span class="dt">Int</span> <span class="op">-&gt;</span> <span class="dt">Aggregate</span> <span class="dt">Int</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true"></a><span class="fu">sum</span> <span class="fu">v</span> <span class="op">=</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true"></a>  <span class="fu">fold</span> <span class="fu">acc</span> <span class="op">=</span> <span class="dv">0</span> <span class="cf">then</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true"></a>    <span class="fu">acc</span> <span class="op">+</span> <span class="fu">v</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true"></a>  <span class="kw">in</span></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true"></a>    <span class="fu">acc</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true"></a><span class="fu">sum</span> : <span class="dt">Element</span> <span class="dt">Int</span> <span class="op">-&gt;</span> <span class="dt">Aggregate</span> <span class="dt">Int</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true"></a><span class="fu">sum</span> <span class="fu">v</span> <span class="op">=</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true"></a>  <span class="fu">fold</span> <span class="fu">acc</span> <span class="op">=</span> <span class="dv">0</span> <span class="cf">then</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true"></a>    <span class="fu">acc</span> <span class="op">+</span> <span class="fu">v</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true"></a>  <span class="kw">in</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true"></a>    <span class="fu">acc</span></span></code></pre></div>
 <p>The critical keyword here is the context <code>fold</code>, which binds the name <code>acc</code> as the running state. The initial value is given after the equals sign (here, 0). Then (we use the keyword <em>then</em> here), the state is updated for every new value coming in.</p>
 <p>In this example, the stream of elements is bound to the name <em>v</em>, so the new state when calculating the sum is given by <code>acc + v</code>.</p>
 <p>Finally, at the end of the query, we can read the value <code>acc</code>, which is an <em>aggregate</em> value.</p>
 <p>As another example, here’s how one can test if any values in a stream were true.</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true"></a><span class="co">-- Are any elements true</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true"></a><span class="fu">any</span> : <span class="dt">Element</span> <span class="dt">Bool</span> <span class="op">-&gt;</span> <span class="dt">Aggregate</span> <span class="dt">Bool</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true"></a><span class="fu">any</span> <span class="fu">x</span> <span class="op">=</span> <span class="fu">fold</span> <span class="fu">a</span> <span class="op">=</span> <span class="dt">False</span> <span class="cf">then</span> <span class="fu">a</span> <span class="op">||</span> <span class="fu">x</span> <span class="kw">in</span> <span class="fu">a</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true"></a><span class="co">-- Are any elements true</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true"></a><span class="fu">any</span> : <span class="dt">Element</span> <span class="dt">Bool</span> <span class="op">-&gt;</span> <span class="dt">Aggregate</span> <span class="dt">Bool</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true"></a><span class="fu">any</span> <span class="fu">x</span> <span class="op">=</span> <span class="fu">fold</span> <span class="fu">a</span> <span class="op">=</span> <span class="dt">False</span> <span class="cf">then</span> <span class="fu">a</span> <span class="op">||</span> <span class="fu">x</span> <span class="kw">in</span> <span class="fu">a</span></span></code></pre></div>
 <p>The stream of values under test here is bound to <code>x</code>, while the accumulator is called <code>a</code>. We start the calculation with False (as no values have been true so far). Then, as each new data point comes in, we test if either <code>a</code>, or the new value <code>x</code> is true. If either of them are, then our new accumulator is going to be true as well.</p>
 <p>Finally, we read the accumulator as the final answer, which will tell us if at least one of the values was true.</p>
+<h3 id="scan">Scan</h3>
+<p>The <em>scan</em> context is used to return the running values of an aggregating query as an element.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true"></a><span class="fu">scan</span> <span class="fu">running_mean</span> <span class="op">=</span> <span class="fu">mean</span> <span class="fu">price</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true"></a><span class="kw">in</span> <span class="fu">any</span> (<span class="fu">price</span> <span class="op">&gt;</span> <span class="fu">running_mean</span>)</span></code></pre></div>
+<p>Scanned bindings can only be used where an aggregate value is expected.</p>
 <h3 id="group-and-array-fold">Group and Array Fold</h3>
-<p>Group and Array fold contexts allow for the consumption of groups (maps) and arrays.</p>
+<p>Group and Array fold contexts allow for the consumption of groups (maps) and arrays as folds.</p>
+<p>For example, the following expression will return the basket with the highest sum of amounts.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true"></a><span class="fu">group</span> <span class="fu">fold</span> (<span class="fu">k</span><span class="op">,</span><span class="fu">v</span>) <span class="op">=</span> (<span class="fu">group</span> <span class="fu">basket</span> <span class="kw">in</span> <span class="fu">sum</span> <span class="fu">amount</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true"></a><span class="kw">in</span> <span class="fu">max_by</span> <span class="fu">v</span> <span class="fu">k</span></span></code></pre></div>
+<p>One can also fold over arrays using</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true"></a><span class="fu">array</span> <span class="fu">fold</span> <span class="fu">v</span> <span class="op">=</span> (<span class="op">...</span>) <span class="kw">in</span> <span class="op">...</span></span></code></pre></div>
+<p>The syntax is like a <code>let</code> in that the patterns on the left are bound to the expression on the right, (which must be a <code>Group</code> for <code>group fold</code>), the bindings are then available within the body.</p>
+<p>Usually, when using a <code>group fold</code> it will be over the results of grouping expression, and return an <code>Aggregate</code> value. It is however, also possible to use a group fold to produce an element if the input <code>Group</code> is an <code>Element</code> as well.</p>
   </div>
 
 <!-- End Body

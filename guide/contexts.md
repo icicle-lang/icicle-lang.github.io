@@ -53,6 +53,22 @@ Returning an _element_ from a filter expression is not valid, because downstream
 calculations wouldn't be able to line up between different streams if a function
 were to be applied.
 
+### Filter Let
+
+The _filter let_ context binds a partial pattern to filter a stream before calculating
+an aggregate, combining the characteristics of the preceding two contexts.
+
+```elm
+sum_options : Element (Option Int) -> Aggregate Int
+sum_options optNum =
+  filter let Some num = optNum
+  in sum num
+```
+
+Like _filter_, returning an _element_ within the context of a _filter let_ expression
+is a type error.
+
+
 ### Window
 
 Window is a specialised filter which only permits facts which occurred within
@@ -146,7 +162,43 @@ is going to be true as well.
 Finally, we read the accumulator as the final answer, which will tell us
 if at least one of the values was true.
 
+### Scan
+
+The _scan_ context is used to return the running values of an aggregating
+query as an element.
+
+```elm
+scan running_mean = mean price
+in any (price > running_mean)
+```
+
+Scanned bindings can only be used where an aggregate value is expected.
+
 ### Group and Array Fold
 
 Group and Array fold contexts allow for the consumption of groups (maps)
-and arrays.
+and arrays as folds.
+
+For example, the following expression will return the basket with the
+highest sum of amounts.
+
+```elm
+group fold (k,v) = (group basket in sum amount)
+in max_by v k
+```
+
+One can also fold over arrays using
+
+```elm
+array fold v = (...) in ...
+```
+
+The syntax is like a `let` in that the patterns on the left are bound to the
+expression on the right, (which must be a `Group` for `group fold`), the
+bindings are then available within the body.
+
+Usually, when using a `group fold` it will be over the results of grouping
+expression, and return an `Aggregate` value. It is however, also possible
+to use a group fold to produce an element if the input `Group` is an `Element`
+as well.
+
