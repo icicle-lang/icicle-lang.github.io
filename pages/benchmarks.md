@@ -5,7 +5,7 @@ title: Benchmarks
 Icicle is fast. By compiling all queries to efficient C code with
 unboxed data structures, we can ensure that our queries run efficiently.
 
-The benchmarks below are true, but also unfair to Icicle's performance.
+The benchmarks below are true, but also unfair to Icicle's detriment.
 
 We thought of a set of queries which would be easy and possible to
 write in SQL, then wrote simple versions in Icicle, and optimised the
@@ -17,7 +17,7 @@ nut out the SQL.
 The thing is though, when we just gave the definitions for the queries
 we wanted to an engineer who hadn't been thinking about this problem
 for the past few years, they took 2 weeks to write the SQL to perform
-them, and they ran 1000x slower then our naïve Icicle version.
+them, and they ran 1000x slower than our naïve Icicle version.
 
 ## The Numbers
 

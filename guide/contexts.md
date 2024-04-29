@@ -2,13 +2,13 @@
 title: Contexts
 ---
 
-Icicle expressions can exist within a context, which make writing
-features easier, by, for example, allowing one to name expressions, or
-to pre-filter the data. But they can also do much more.
+Icicle expressions can exist within a series of contexts which make writing
+features easier. One can, for example, name sub-expressions, or
+to pre-filter the data, but they can also do much more.
 
 ### Let
 
-The simplest context are _let_ expressions, which allow one to calculate and
+The simplest contexts are _let_ expressions, which allow one to calculate and
 reuse values by binding them to a name.
 
 ```elm
@@ -22,7 +22,10 @@ in
   total / number
 ```
 
-when building features however, a number of other contexts are available.
+You can bind many different expressions in a single _let_, by lining the names
+up vertically or by separating them with a semicolon.
+
+When building features however, a number of other contexts are available.
 
 ### Filter
 

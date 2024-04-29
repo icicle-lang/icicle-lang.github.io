@@ -67,9 +67,9 @@
     <div class="nine columns content">
         <h1>Contexts</h1>
 
-        <p>Icicle expressions can exist within a context, which make writing features easier, by, for example, allowing one to name expressions, or to pre-filter the data. But they can also do much more.</p>
+        <p>Icicle expressions can exist within a series of contexts which make writing features easier. One can, for example, name sub-expressions, or to pre-filter the data, but they can also do much more.</p>
 <h3 id="let">Let</h3>
-<p>The simplest context are <em>let</em> expressions, which allow one to calculate and reuse values by binding them to a name.</p>
+<p>The simplest contexts are <em>let</em> expressions, which allow one to calculate and reuse values by binding them to a name.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="kw">let</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true"></a>  <span class="fu">total</span> <span class="op">=</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true"></a>    <span class="fu">sum</span> <span class="fu">value</span></span>
@@ -78,7 +78,8 @@
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true"></a>    <span class="fu">count</span> <span class="fu">value</span></span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true"></a><span class="kw">in</span></span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true"></a>  <span class="fu">total</span> <span class="op">/</span> <span class="fu">number</span></span></code></pre></div>
-<p>when building features however, a number of other contexts are available.</p>
+<p>You can bind many different expressions in a single <em>let</em>, by lining the names up vertically or by separating them with a semicolon.</p>
+<p>When building features however, a number of other contexts are available.</p>
 <h3 id="filter">Filter</h3>
 <p>The <em>filter</em> context takes an expression which applies a filter to a stream before calculating an aggregate. The value calculated within the context must be aggregated, and the value which is being filtered must be a streaming element</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="fu">proportion</span> : <span class="dt">Element</span> <span class="dt">Bool</span> <span class="op">-&gt;</span> <span class="dt">Aggregate</span> (<span class="dt">Possibly</span> <span class="dt">Double</span>)</span>
