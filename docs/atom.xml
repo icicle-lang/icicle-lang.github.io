@@ -8,8 +8,16 @@
         <name>Huw Campbell</name>
         <email>huw@huwcampbell.com</email>
     </author>
-    <updated>2023-05-20T00:00:00Z</updated>
+    <updated>2024-08-30T00:00:00Z</updated>
     <entry>
+    <title>Destructive Updates- a Stitch in Time</title>
+    <link href="https://huwcampbell.com/posts/2025-02-01-a-time-travelling-optimisation.html" />
+    <id>https://huwcampbell.com/posts/2025-02-01-a-time-travelling-optimisation.html</id>
+    <published>2024-08-30T00:00:00Z</published>
+    <updated>2024-08-30T00:00:00Z</updated>
+    <summary type="html"><![CDATA[How the Tardis Monad and a Stitching Graph helps discover affine array usage, reducing run times by up to a half.]]></summary>
+</entry>
+<entry>
     <title>Receiving Gifts – a Reflection Tutorial
 </title>
     <link href="https://huwcampbell.com/posts/2023-05-20-receiving-gifts-a-reflection-tutorial.html" />

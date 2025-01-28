@@ -14,33 +14,34 @@ allowing them to combine and fuse hundreds of rich, individual, queries into a c
 safe and efficient execution.
 
 At the heart of the language is our Core intermediate language, which we've spoken about optimising
-in [an earlier post](/docs/posts/2020-09-04-traversals-for-optimisations.html). This is a simple, pure,
+in [an earlier post](/docs/posts/2020-09-04-traversals-for-optimisations.html). This is a pure,
 simply-typed lambda calculus based DSL with restrictions on arbitrary recursion and closure creation.
 
-To make it fast, we compile all queries to C, and unpack almost all of our data types into simple,
-unboxed C types, for example, the `Either Int Bool` type will compile to 3 C variables on the stack,
-indicating the tag, and variables for left and right values.
+To ensure speed, we compile all queries to C and convert almost all of our data types into simple,
+unboxed C types. For example, the `Either Int Bool` type will compile into three C variables on the
+stack, indicating the tag, and variables for the left and right values.
 
-Maps and Arrays in the language however compile using the struct of arrays approach when going to C,
-but, as Icicle Core is a _pure_ query language, during lowering the compiler inserts copy operations
-to arrays before performing any mutations upon them.
+Maps and arrays in the language, however, compile using the struct of arrays approach when transitioning
+to C; compiling down to potentially many C arrays of simple types. However, as Icicle Core is a _pure_
+language, during lowering the compiler inserts copy operations to arrays before performing any
+mutations upon them.
 
-This is the story of how we remove the overwhelming majority of these copy operations from idiomatic
-Icicle code and instead perform destructive updates, while maintaining query semantics and cutting
-run-times by up to half.
-
+This is the story of how we eliminate the overwhelming majority of these copy operations from idiomatic
+Icicle code by performing destructive updates during operations such as inserting into a map or sorting
+an array, while maintaining query semantics and reducing run-times by up to 50%.
 
 ## Motivating Queries
 
 It's very common in Icicle queries to use the built in `group` context, which acts somewhat like an
-SQL group by.
+SQL group by. For example, the following query looks at a stream of injuries, then computes
+a map of locations to the sum of the injuries' severities.
 
 ```elm
 from injury in
   group location in sum severity
 ```
 
-in out core language, this will become something like this (omitting error handling):
+in our core language, this will become something like this (omitting error handling):
 
 ```elm
 STREAM_FOLD accum : Map String Double
@@ -66,7 +67,8 @@ STREAM_FOLD accum : Map String Double
 When compiled to our lower level DSLs, and finally on to C, this query will end up being backed by
 two arrays. As new events come in and are updated, it would be best to keep memory usage linear
 with number of keys. Due to the implicit copy operation from the pure Core DSL though, a naïve
-approach might end up using memory proportional to the number of keys times the number of injuries.
+approach might end up using memory proportional to the product of the number of keys times and
+number of injuries.
 
 
 ## A Retrospective - How Reference Counting Enables Copy Elision
@@ -74,7 +76,7 @@ approach might end up using memory proportional to the number of keys times the 
 The R programming language is popular amongst statisticians and data scientists, and has a number
 of distinctive properties. Most operations in R are pure and referentially transparent, which is
 critical for its ease of use and safety. It's also a language with pervasive vectorisation. All the
-core data structures of R are vectors. With atomic vectors neatly wrapping C arrays (sound familiar?).
+core data structures of R are vectors. With atomic vectors neatly wrapping C arrays.
 
 People still want their R code to be relatively performant however, and adding naïve copying to
 every vector update would be prohibitively slow.
@@ -91,10 +93,9 @@ Look at this R program:
  [1]  1  2  3  4  5  6  7  8  9 10
 ```
 
-This program maintains R's referential semantics, but under the covers there's some
+This program maintains R's referential semantics, but under the covers there are some
 interesting things going on. One might first assume that when
-`y` is bound to `x`, a copy of the vector is made, but that is _not_ what R is going to do in
-this situation.
+`y` is bound to `x`, a copy of the vector is made, but that is _not_ what R is going to do here.
 
 In R, names are just ways to reference values, and in this case, there will be two names pointing
 to the atomic vector `1:10`; and when `x` is going to be mutated, a copy of the backed array will
@@ -111,12 +112,13 @@ This program however will do something very different:
 
 In this program, because there's only one name pointing to the vector in question, the value
 will be updated in place. R can perform this optimisation because it's a reference counted
-language and when `[]<-` function is called, it can look at the number of references which
+language and when the `[]<-` function is called, it can look at the number of references which
 exist – then, if there's only one (itself), it knows it can modify in place without the
-optimisation breaking the program's semantics [Advanced R].
+optimisation breaking the program's semantics (see [Advanced R]).
 
-Other languages which employ this technique include the Lean proof assistant and functional
-programming language and Koka, which reuses constructors (like list's cons) too.
+Other languages which employ this technique include the [Lean proof assistant][Counting Immutable Beans]
+and functional programming language and [Koka][Precise, Automatic, Reference Counting], which
+reuses constructors (like list's cons) too.
 
 
 ## Icicle – Compilation Time Copy Elision
@@ -184,9 +186,11 @@ Where `Exp` is a simple expression type containing variables (`Var`), primitives
 and fully applied applications.
 
 It's important to note that `Let`, `InitAccumulator` and `Read` introduce scope...
-they contain the `Statement` that can use the binding introduced.
+they contain the `Statement` that can use the binding introduced. To make life
+easier, we disallow shadowing in this DSL – shadowed bindings in the source
+language will be freshened.
 
-Furthermore, we should not that Avalanche programs can get pretty large, with map
+Furthermore, we should note that Avalanche programs can get pretty large, with map
 operations for example often including code for a binary search. Typical Avalanche
 programs also contain the code for up to a hundred user queries.
 
@@ -206,10 +210,11 @@ We maintain a few invariants:
 - If we delete a key from the graph, we stitch up its incoming and outgoing edges.
   So the graph `a -> b -> c` will become `a -> c` if `b` is removed.
   - This is why we refer to it as a Stitching Graph.
-- If we `overwrite` an edge, that edge becomes the only edge from the
+- If we `overwrite` an edge (this is our main `insert` operation), that edge
+  becomes the only edge from the
   starting key. i.e., `overwrite a c (overwrite a b empty) == overwrite a c empty`.
 - If we have a cycle, like `a -> b -> a` and remove `b`, the stitching to `a -> a`
-  will be simplified to nothing, and the edge will be removed.
+  will be simplified to nothing, and the node will be removed.
 
 And its API looks a bit like this:
 
@@ -237,8 +242,8 @@ traverse through our program's AST. Using the `State` monad in this initial exam
 
 ```haskell
 go :: Statement -> State Graph Statement
-go statements =
-  case statements of
+go statement =
+  case statement of
     --
     -- Let bindings are a lot like reads and
     -- initialisations if the expression is
@@ -268,8 +273,8 @@ go statements =
 
     --
     -- Traverse the block items in order.
-    Block xs ->
-      Block <$> traverse go xs
+    Block inner ->
+      Block <$> traverse go inner
 
     --
     -- Run both sides and merge
@@ -287,9 +292,9 @@ go statements =
     --
     -- Reach a fixpoint, running until the
     -- graph doesn't change anymore.
-    ForeachFacts statements -> do
+    ForeachFacts inner -> do
       ForeachFacts <$>
-        fixGo statements
+        fixGo inner
 
 
  where
@@ -371,12 +376,12 @@ go statements =
   case statements of
     Let nm x ss
       | Just ref <- arrayReference x ->
-        modifyBackwards (Set.delete nm . Set.union (Exp.freevars x))
+        modifyBackwards (Set.delete nm . Set.union (Exp.freeVars x))
         Let nm x <$>
           scopedGo nm ref ss
 
       | otherwise ->
-        modifyBackwards (Set.delete nm . Set.union (Exp.freevars x))
+        modifyBackwards (Set.delete nm . Set.union (Exp.freeVars x))
         Let nm x <$>
           scopedGo' nm ss
 ```
@@ -387,11 +392,13 @@ observed in this backwards pass.
 
 ## Performing the Copy Elision
 
-Our elaborator to `Avalanche` only emits array copy operations in a particular
-location (directly a the Expression being written to an accumulator), so we
-don't need to be too careful and thread the `Tardis` states through `Exp`
-syntax tree in addition to the `Statement` syntax tree; we can cheat and add
-a rewrite within the function `go`
+Our elaborator to `Avalanche` will emit a copy operation before performing
+any mutating action (for example: heap sort, or update), but fortunately
+it emits these in a very predictable fashion – directly as the expression
+being written to an accumulator. As such, we don't need to be too careful
+threading the `Tardis` states through the `Exp` syntax tree in addition to
+the `Statement` syntax tree and we can cheat a little and add a rewrite
+directly in the definition of `go`
 
 ```haskell
 go statements =
@@ -423,8 +430,8 @@ go statements =
 ```
 
 
-where the function `hasNoFurtherReferences` looks at the graph and 
-does a search from all used variables to all refs which might be shared with them,
+where the function `hasNoFurtherReferences` looks at the graph and
+does a search from all used variables to all references which might be shared with them,
 as well as a similar search from the ref. If these transitive dependency sets
 are disjoint, it means there's no possible way that the array could be looked at
 after this write, making is safe to mutate it in place.
@@ -442,10 +449,10 @@ we have to deal with nested loops quite a lot, it's imperative that most loops
 reach their fixpoint on their first iteration, lest we suffer from
 exponential slowdowns as we delve deeper repeating nested loops.
 
-This is one the key reason for using our Stiching Graph – it's very good at returning
+This is one the key reason for using our Stitching Graph – it's very good at returning
 to its initial state when keys are removed as they go out of scope.
 
-Consider this program, written in an psuedo-syntax for avalanche.
+Consider this program, written in an pseudo-syntax for avalanche.
 
 ```elm
 init
@@ -490,44 +497,47 @@ be determined in a single pass? Let's have a look:
    - It's clear that no references of `acc_1` are used again (writing doesn't count
      as usage), so this copy will be omitted.
    - We have to add the reference `b -> a`
-   - Our graph is not `b -> a -> acc_1`
+   - Our graph is now `b -> a -> acc_1`
 5. Binding `c` doesn't introduce any references into the graph.
-6. Writing to acc_1 ovewrites out edges in our graph, but there are none, so we have
+6. Writing to `acc_1` introduces a new edge to the graph, so we have
    - `acc_1 -> b -> a -> acc_1`
 7. As we leave the scope of the let bindings
    - b will be removed and we'll have `acc_1 -> a -> acc_1`
 8. As we leave the scope of the `read`, we'll further drop `a` from the graph
-   - Here though, we would have `acc_1 -> acc_1`, but, these are simplified
-   - Our final graph after leaving the scope of `read` is the empty graph
+   - Here though, we would have `acc_1 -> acc_1`, but, these are simplified,
+   - Therefore our final graph after leaving the scope of `read` is the empty graph
 9. As this was the graph at the start of the `foreach_facts`, we've reached our
    fixpoint in a single traversal of the AST, and the copy has been removed.
 
+So the answer to both of our questions is in the affirmative.
+
 ## Commentary and Future Work
 
-It's worth thinking about what this technique is, and what it might also be used
-for.
+It's worth thinking about generalising this algorithm, and considering how it
+relates to others previously described.
 
-We've essentially written an abstract interpreter for our programs, tracking possible
-pointer references. While I am very pooly acquainted with the literature on reference
-counting. This sort of information strikes me as potentially very useful
-for optimising functional languages which use it reference counting.
+In a real sense, we've written an abstract interpreter for our programs, tracking possible
+pointer references. While I am not 100% across the literature on reference
+counting optimisations, this sort of information strikes me as potentially
+very useful for optimising functional languages which use it.
 
 For example, if we examine our reference graph and see that the potential references
 will always be 0 or no usages will be used in the future, we won't even need to check
 the reference count at all and can either drop or recycle the memory location immediately.
 
-If we further extended our Stiching Graph to maintain "exact" and "possible" edges
+
+If we further extended our Stitching Graph to maintain "exact" and "possible" edges
 (this would mean a small adjustment to the graph and its merge algorithm), and we saw
 that we would always have exactly the same number of exact edges after a scoped operation
-or function call, then again we could remove reference counting operations inside, as they
+or function call, then again we could remove reference counting operations, as they
 must cancel out perfectly.
 
 
-In our case, we have a whole program compiler and optimiser, so we can get a _very_ good
+In our case, we have a whole-program compiler and optimiser, so we can get a _very_ good
 view of the reference graph; if we however were working with smaller functions, we would
 need to keep track of what we don't know. Arguments passed to functions for example,
 would have "possible" edges from the outside of the function, meaning we can't omit
-operationg easily. But as we inlined functions, new oportunities might arise.
+operations as easily. But as we inlined functions, new opportunities might arise.
 
 For example, consider the function `map h . filter g . map f`: if this were to be aggressively
 inlined, then we would _know_, that the `cons` cells output from `map f` part would have no
@@ -536,6 +546,24 @@ without even looking at their reference count when the predicate fails. Furtherm
 the function `map h` could immediately reuse the memory locations for every cons cell still
 around, replacing the values after applying `h` to them.
 
+## Application in a Strict Language
+
+The discovery of this algorithm was challenging, it took time and iteration –
+even though I could intuitively pick copy operations which could be removed, writing an
+(even close to) `O(n)` algorithm was proving to be a real challenge.
+
+It was only when I remembered Phil Freeman's [Tardis] Monad water problem [solution][PAF Water] that
+I managed to get a hold of the process and nail down the algorithm.
+
+*Laziness, and Monadic composition was critical in allowing me to discover this algorithm.*
+
+That said, I think one could make this work in a strict language, by adopting a relatively
+straight forward, explicit two pass approach, where in the forwards pass, instead of returning
+a `Statement` value, we return a function, `Usage -> (Statement, Usage)`; and pass the usage
+set backwards while building the graph in our reverse pass.
 
   [Advanced R]: http://adv-r.had.co.nz/memory.html#modification
   [Precise, Automatic, Reference Counting]: https://koka-lang.github.io/koka/doc/book.html#why-perceus
+  [Counting Immutable Beans]: https://arxiv.org/pdf/1908.05647
+  [PAF Water]: https://gist.github.com/paf31/9d84ecf6a6a9b69cdb597a390f25764d
+  [Tardis]: https://hackage.haskell.org/package/tardis

@@ -79,15 +79,15 @@
 How the Tardis Monad and a Stitching Graph helps discover affine array usage, permitting destructive updates.
 </h5>
 <p>Icicle is a high-level streaming query language, which gives new capabilities to its users, allowing them to combine and fuse hundreds of rich, individual, queries into a combined plan for safe and efficient execution.</p>
-<p>At the heart of the language is our Core intermediate language, which we’ve spoken about optimising in <a href="../docs/posts/2020-09-04-traversals-for-optimisations.html">an earlier post</a>. This is a simple, pure, simply-typed lambda calculus based DSL with restrictions on arbitrary recursion and closure creation.</p>
-<p>To make it fast, we compile all queries to C, and unpack almost all of our data types into simple, unboxed C types, for example, the <code>Either Int Bool</code> type will compile to 3 C variables on the stack, indicating the tag, and variables for left and right values.</p>
-<p>Maps and Arrays in the language however compile using the struct of arrays approach when going to C, but, as Icicle Core is a <em>pure</em> query language, during lowering the compiler inserts copy operations to arrays before performing any mutations upon them.</p>
-<p>This is the story of how we remove the overwhelming majority of these copy operations from idiomatic Icicle code and instead perform destructive updates, while maintaining query semantics and cutting run-times by up to half.</p>
+<p>At the heart of the language is our Core intermediate language, which we’ve spoken about optimising in <a href="../docs/posts/2020-09-04-traversals-for-optimisations.html">an earlier post</a>. This is a pure, simply-typed lambda calculus based DSL with restrictions on arbitrary recursion and closure creation.</p>
+<p>To ensure speed, we compile all queries to C and convert almost all of our data types into simple, unboxed C types. For example, the <code>Either Int Bool</code> type will compile into three C variables on the stack, indicating the tag, and variables for the left and right values.</p>
+<p>Maps and arrays in the language, however, compile using the struct of arrays approach when transitioning to C; compiling down to potentially many C arrays of simple types. However, as Icicle Core is a <em>pure</em> language, during lowering the compiler inserts copy operations to arrays before performing any mutations upon them.</p>
+<p>This is the story of how we eliminate the overwhelming majority of these copy operations from idiomatic Icicle code by performing destructive updates during operations such as inserting into a map or sorting an array, while maintaining query semantics and reducing run-times by up to 50%.</p>
 <h2 id="motivating-queries">Motivating Queries</h2>
-<p>It’s very common in Icicle queries to use the built in <code>group</code> context, which acts somewhat like an SQL group by.</p>
+<p>It’s very common in Icicle queries to use the built in <code>group</code> context, which acts somewhat like an SQL group by. For example, the following query looks at a stream of injuries, then computes a map of locations to the sum of the injuries’ severities.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="fu">from</span> <span class="fu">injury</span> <span class="kw">in</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true"></a>  <span class="fu">group</span> <span class="fu">location</span> <span class="kw">in</span> <span class="fu">sum</span> <span class="fu">severity</span></span></code></pre></div>
-<p>in out core language, this will become something like this (omitting error handling):</p>
+<p>in our core language, this will become something like this (omitting error handling):</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="dt">STREAM_FOLD</span> <span class="fu">accum</span> : <span class="dt">Map</span> <span class="dt">String</span> <span class="dt">Double</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true"></a>  <span class="dt">INIT</span>:</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true"></a>    <span class="dt">Map</span> []</span>
@@ -105,9 +105,9 @@ How the Tardis Monad and a Stitching Graph helps discover affine array usage, pe
 <span id="cb2-15"><a href="#cb2-15" aria-hidden="true"></a>        <span class="fu">severity</span></span>
 <span id="cb2-16"><a href="#cb2-16" aria-hidden="true"></a>        <span class="fu">location</span></span>
 <span id="cb2-17"><a href="#cb2-17" aria-hidden="true"></a>        <span class="fu">accum</span></span></code></pre></div>
-<p>When compiled to our lower level DSLs, and finally on to C, this query will end up being backed by two arrays. As new events come in and are updated, it would be best to keep memory usage linear with number of keys. Due to the implicit copy operation from the pure Core DSL though, a naïve approach might end up using memory proportional to the number of keys times the number of injuries.</p>
+<p>When compiled to our lower level DSLs, and finally on to C, this query will end up being backed by two arrays. As new events come in and are updated, it would be best to keep memory usage linear with number of keys. Due to the implicit copy operation from the pure Core DSL though, a naïve approach might end up using memory proportional to the product of the number of keys times and number of injuries.</p>
 <h2 id="a-retrospective---how-reference-counting-enables-copy-elision">A Retrospective - How Reference Counting Enables Copy Elision</h2>
-<p>The R programming language is popular amongst statisticians and data scientists, and has a number of distinctive properties. Most operations in R are pure and referentially transparent, which is critical for its ease of use and safety. It’s also a language with pervasive vectorisation. All the core data structures of R are vectors. With atomic vectors neatly wrapping C arrays (sound familiar?).</p>
+<p>The R programming language is popular amongst statisticians and data scientists, and has a number of distinctive properties. Most operations in R are pure and referentially transparent, which is critical for its ease of use and safety. It’s also a language with pervasive vectorisation. All the core data structures of R are vectors. With atomic vectors neatly wrapping C arrays.</p>
 <p>People still want their R code to be relatively performant however, and adding naïve copying to every vector update would be prohibitively slow.</p>
 <p>Look at this R program:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="op">&gt;</span><span class="st"> </span>x    &lt;-<span class="st"> </span><span class="dv">1</span><span class="op">:</span><span class="dv">10</span></span>
@@ -117,15 +117,15 @@ How the Tardis Monad and a Stitching Graph helps discover affine array usage, pe
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true"></a> [<span class="dv">1</span>]  <span class="dv">1</span>  <span class="dv">2</span>  <span class="dv">3</span>  <span class="dv">4</span> <span class="dv">10</span>  <span class="dv">6</span>  <span class="dv">7</span>  <span class="dv">8</span>  <span class="dv">9</span> <span class="dv">10</span></span>
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true"></a><span class="op">&gt;</span><span class="st"> </span>y</span>
 <span id="cb3-7"><a href="#cb3-7" aria-hidden="true"></a> [<span class="dv">1</span>]  <span class="dv">1</span>  <span class="dv">2</span>  <span class="dv">3</span>  <span class="dv">4</span>  <span class="dv">5</span>  <span class="dv">6</span>  <span class="dv">7</span>  <span class="dv">8</span>  <span class="dv">9</span> <span class="dv">10</span></span></code></pre></div>
-<p>This program maintains R’s referential semantics, but under the covers there’s some interesting things going on. One might first assume that when <code>y</code> is bound to <code>x</code>, a copy of the vector is made, but that is <em>not</em> what R is going to do in this situation.</p>
+<p>This program maintains R’s referential semantics, but under the covers there are some interesting things going on. One might first assume that when <code>y</code> is bound to <code>x</code>, a copy of the vector is made, but that is <em>not</em> what R is going to do here.</p>
 <p>In R, names are just ways to reference values, and in this case, there will be two names pointing to the atomic vector <code>1:10</code>; and when <code>x</code> is going to be mutated, a copy of the backed array will be made at that point in time.</p>
 <p>This program however will do something very different:</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="op">&gt;</span><span class="st"> </span>x    &lt;-<span class="st"> </span><span class="dv">1</span><span class="op">:</span><span class="dv">10</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true"></a><span class="op">&gt;</span><span class="st"> </span>x[<span class="dv">5</span>] &lt;-<span class="st"> </span><span class="dv">10</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true"></a><span class="op">&gt;</span><span class="st"> </span>x</span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true"></a> [<span class="dv">1</span>]  <span class="dv">1</span>  <span class="dv">2</span>  <span class="dv">3</span>  <span class="dv">4</span> <span class="dv">10</span>  <span class="dv">6</span>  <span class="dv">7</span>  <span class="dv">8</span>  <span class="dv">9</span> <span class="dv">10</span></span></code></pre></div>
-<p>In this program, because there’s only one name pointing to the vector in question, the value will be updated in place. R can perform this optimisation because it’s a reference counted language and when <code>[]&lt;-</code> function is called, it can look at the number of references which exist – then, if there’s only one (itself), it knows it can modify in place without the optimisation breaking the program’s semantics <a href="http://adv-r.had.co.nz/memory.html#modification">Advanced R</a>.</p>
-<p>Other languages which employ this technique include the Lean proof assistant and functional programming language and Koka, which reuses constructors (like list’s cons) too.</p>
+<p>In this program, because there’s only one name pointing to the vector in question, the value will be updated in place. R can perform this optimisation because it’s a reference counted language and when the <code>[]&lt;-</code> function is called, it can look at the number of references which exist – then, if there’s only one (itself), it knows it can modify in place without the optimisation breaking the program’s semantics (see <a href="http://adv-r.had.co.nz/memory.html#modification">Advanced R</a>).</p>
+<p>Other languages which employ this technique include the <a href="https://arxiv.org/pdf/1908.05647">Lean proof assistant</a> and functional programming language and <a href="https://koka-lang.github.io/koka/doc/book.html#why-perceus">Koka</a>, which reuses constructors (like list’s cons) too.</p>
 <h2 id="icicle-compilation-time-copy-elision">Icicle – Compilation Time Copy Elision</h2>
 <p>In Icicle, we avoid using reference counting because, except for arrays, we don’t perform any allocations, and bindings are placed directly onto the stack. For arrays, we use a simple bump allocator for each entity being processed because it’s fast and we know that each entity’s operation time will be bounded by the number of events. We should still aim to reduce new array allocations though for speed and memory efficiency, but do it entirely at compile time.</p>
 <p>The constraints for this optimization are:</p>
@@ -163,8 +163,8 @@ How the Tardis Monad and a Stitching Graph helps discover affine array usage, pe
 <span id="cb5-16"><a href="#cb5-16" aria-hidden="true"></a> <span class="co">-- | Update an accumulator</span></span>
 <span id="cb5-17"><a href="#cb5-17" aria-hidden="true"></a> <span class="op">|</span> <span class="dt">Write</span> <span class="dt">Name</span> <span class="dt">Exp</span></span></code></pre></div>
 <p>Where <code>Exp</code> is a simple expression type containing variables (<code>Var</code>), primitives, and fully applied applications.</p>
-<p>It’s important to note that <code>Let</code>, <code>InitAccumulator</code> and <code>Read</code> introduce scope… they contain the <code>Statement</code> that can use the binding introduced.</p>
-<p>Furthermore, we should not that Avalanche programs can get pretty large, with map operations for example often including code for a binary search. Typical Avalanche programs also contain the code for up to a hundred user queries.</p>
+<p>It’s important to note that <code>Let</code>, <code>InitAccumulator</code> and <code>Read</code> introduce scope… they contain the <code>Statement</code> that can use the binding introduced. To make life easier, we disallow shadowing in this DSL – shadowed bindings in the source language will be freshened.</p>
+<p>Furthermore, we should note that Avalanche programs can get pretty large, with map operations for example often including code for a binary search. Typical Avalanche programs also contain the code for up to a hundred user queries.</p>
 <h2 id="building-a-reference-graph">Building a Reference Graph</h2>
 <p>We want to build a directed graph of all references, so that we can determine if a reference might be used again later in the program.</p>
 <p>As this is Haskell, we use a pure, persistent data structure (here, backed by a pair of <code>Data.Map Name (Set Name)</code>) which indicate forwards and backwards edges.</p>
@@ -175,8 +175,8 @@ How the Tardis Monad and a Stitching Graph helps discover affine array usage, pe
 <ul>
 <li>This is why we refer to it as a Stitching Graph.</li>
 </ul></li>
-<li>If we <code>overwrite</code> an edge, that edge becomes the only edge from the starting key. i.e., <code>overwrite a c (overwrite a b empty) == overwrite a c empty</code>.</li>
-<li>If we have a cycle, like <code>a -&gt; b -&gt; a</code> and remove <code>b</code>, the stitching to <code>a -&gt; a</code> will be simplified to nothing, and the edge will be removed.</li>
+<li>If we <code>overwrite</code> an edge (this is our main <code>insert</code> operation), that edge becomes the only edge from the starting key. i.e., <code>overwrite a c (overwrite a b empty) == overwrite a c empty</code>.</li>
+<li>If we have a cycle, like <code>a -&gt; b -&gt; a</code> and remove <code>b</code>, the stitching to <code>a -&gt; a</code> will be simplified to nothing, and the node will be removed.</li>
 </ul>
 <p>And its API looks a bit like this:</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a><span class="kw">module</span> <span class="dt">Graph</span> <span class="kw">where</span></span>
@@ -194,8 +194,8 @@ How the Tardis Monad and a Stitching Graph helps discover affine array usage, pe
 <span id="cb6-13"><a href="#cb6-13" aria-hidden="true"></a><span class="ot">merge ::</span> <span class="dt">Graph</span> <span class="ot">-&gt;</span> <span class="dt">Graph</span> <span class="ot">-&gt;</span> <span class="dt">Graph</span></span></code></pre></div>
 <p>Because this structure shares well, it’s ok to build and retain this type as we traverse through our program’s AST. Using the <code>State</code> monad in this initial example:</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true"></a><span class="ot">go ::</span> <span class="dt">Statement</span> <span class="ot">-&gt;</span> <span class="dt">State</span> <span class="dt">Graph</span> <span class="dt">Statement</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true"></a>go statements <span class="ot">=</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true"></a>  <span class="kw">case</span> statements <span class="kw">of</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true"></a>go statement <span class="ot">=</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true"></a>  <span class="kw">case</span> statement <span class="kw">of</span></span>
 <span id="cb7-4"><a href="#cb7-4" aria-hidden="true"></a>    <span class="co">--</span></span>
 <span id="cb7-5"><a href="#cb7-5" aria-hidden="true"></a>    <span class="co">-- Let bindings are a lot like reads and</span></span>
 <span id="cb7-6"><a href="#cb7-6" aria-hidden="true"></a>    <span class="co">-- initialisations if the expression is</span></span>
@@ -225,8 +225,8 @@ How the Tardis Monad and a Stitching Graph helps discover affine array usage, pe
 <span id="cb7-30"><a href="#cb7-30" aria-hidden="true"></a></span>
 <span id="cb7-31"><a href="#cb7-31" aria-hidden="true"></a>    <span class="co">--</span></span>
 <span id="cb7-32"><a href="#cb7-32" aria-hidden="true"></a>    <span class="co">-- Traverse the block items in order.</span></span>
-<span id="cb7-33"><a href="#cb7-33" aria-hidden="true"></a>    <span class="dt">Block</span> xs <span class="ot">-&gt;</span></span>
-<span id="cb7-34"><a href="#cb7-34" aria-hidden="true"></a>      <span class="dt">Block</span> <span class="op">&lt;$&gt;</span> <span class="fu">traverse</span> go xs</span>
+<span id="cb7-33"><a href="#cb7-33" aria-hidden="true"></a>    <span class="dt">Block</span> inner <span class="ot">-&gt;</span></span>
+<span id="cb7-34"><a href="#cb7-34" aria-hidden="true"></a>      <span class="dt">Block</span> <span class="op">&lt;$&gt;</span> <span class="fu">traverse</span> go inner</span>
 <span id="cb7-35"><a href="#cb7-35" aria-hidden="true"></a></span>
 <span id="cb7-36"><a href="#cb7-36" aria-hidden="true"></a>    <span class="co">--</span></span>
 <span id="cb7-37"><a href="#cb7-37" aria-hidden="true"></a>    <span class="co">-- Run both sides and merge</span></span>
@@ -244,9 +244,9 @@ How the Tardis Monad and a Stitching Graph helps discover affine array usage, pe
 <span id="cb7-49"><a href="#cb7-49" aria-hidden="true"></a>    <span class="co">--</span></span>
 <span id="cb7-50"><a href="#cb7-50" aria-hidden="true"></a>    <span class="co">-- Reach a fixpoint, running until the</span></span>
 <span id="cb7-51"><a href="#cb7-51" aria-hidden="true"></a>    <span class="co">-- graph doesn't change anymore.</span></span>
-<span id="cb7-52"><a href="#cb7-52" aria-hidden="true"></a>    <span class="dt">ForeachFacts</span> statements <span class="ot">-&gt;</span> <span class="kw">do</span></span>
+<span id="cb7-52"><a href="#cb7-52" aria-hidden="true"></a>    <span class="dt">ForeachFacts</span> inner <span class="ot">-&gt;</span> <span class="kw">do</span></span>
 <span id="cb7-53"><a href="#cb7-53" aria-hidden="true"></a>      <span class="dt">ForeachFacts</span> <span class="op">&lt;$&gt;</span></span>
-<span id="cb7-54"><a href="#cb7-54" aria-hidden="true"></a>        fixGo statements</span>
+<span id="cb7-54"><a href="#cb7-54" aria-hidden="true"></a>        fixGo inner</span>
 <span id="cb7-55"><a href="#cb7-55" aria-hidden="true"></a></span>
 <span id="cb7-56"><a href="#cb7-56" aria-hidden="true"></a></span>
 <span id="cb7-57"><a href="#cb7-57" aria-hidden="true"></a> <span class="kw">where</span></span>
@@ -310,17 +310,17 @@ How the Tardis Monad and a Stitching Graph helps discover affine array usage, pe
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true"></a>  <span class="kw">case</span> statements <span class="kw">of</span></span>
 <span id="cb8-4"><a href="#cb8-4" aria-hidden="true"></a>    <span class="dt">Let</span> nm x ss</span>
 <span id="cb8-5"><a href="#cb8-5" aria-hidden="true"></a>      <span class="op">|</span> <span class="dt">Just</span> ref <span class="ot">&lt;-</span> arrayReference x <span class="ot">-&gt;</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true"></a>        modifyBackwards (Set.delete nm <span class="op">.</span> Set.union (Exp.freevars x))</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true"></a>        modifyBackwards (Set.delete nm <span class="op">.</span> Set.union (Exp.freeVars x))</span>
 <span id="cb8-7"><a href="#cb8-7" aria-hidden="true"></a>        <span class="dt">Let</span> nm x <span class="op">&lt;$&gt;</span></span>
 <span id="cb8-8"><a href="#cb8-8" aria-hidden="true"></a>          scopedGo nm ref ss</span>
 <span id="cb8-9"><a href="#cb8-9" aria-hidden="true"></a></span>
 <span id="cb8-10"><a href="#cb8-10" aria-hidden="true"></a>      <span class="op">|</span> <span class="fu">otherwise</span> <span class="ot">-&gt;</span></span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true"></a>        modifyBackwards (Set.delete nm <span class="op">.</span> Set.union (Exp.freevars x))</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true"></a>        modifyBackwards (Set.delete nm <span class="op">.</span> Set.union (Exp.freeVars x))</span>
 <span id="cb8-12"><a href="#cb8-12" aria-hidden="true"></a>        <span class="dt">Let</span> nm x <span class="op">&lt;$&gt;</span></span>
 <span id="cb8-13"><a href="#cb8-13" aria-hidden="true"></a>          scopedGo' nm ss</span></code></pre></div>
 <p>Because we also remove bindings created by <code>Let</code> and friends as we traverse backwards, effectively we’re maintaining the <code>Set</code> of free variables observed in this backwards pass.</p>
 <h2 id="performing-the-copy-elision">Performing the Copy Elision</h2>
-<p>Our elaborator to <code>Avalanche</code> only emits array copy operations in a particular location (directly a the Expression being written to an accumulator), so we don’t need to be too careful and thread the <code>Tardis</code> states through <code>Exp</code> syntax tree in addition to the <code>Statement</code> syntax tree; we can cheat and add a rewrite within the function <code>go</code></p>
+<p>Our elaborator to <code>Avalanche</code> will emit a copy operation before performing any mutating action (for example: heap sort, or update), but fortunately it emits these in a very predictable fashion – directly as the expression being written to an accumulator. As such, we don’t need to be too careful threading the <code>Tardis</code> states through the <code>Exp</code> syntax tree in addition to the <code>Statement</code> syntax tree and we can cheat a little and add a rewrite directly in the definition of <code>go</code></p>
 <div class="sourceCode" id="cb9"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true"></a>go statements <span class="ot">=</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true"></a>  <span class="kw">case</span> statements <span class="kw">of</span></span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true"></a>    <span class="co">--</span></span>
@@ -347,12 +347,12 @@ How the Tardis Monad and a Stitching Graph helps discover affine array usage, pe
 <span id="cb9-24"><a href="#cb9-24" aria-hidden="true"></a>            <span class="dt">Write</span> n (<span class="dt">Exp.Var</span> ref)</span>
 <span id="cb9-25"><a href="#cb9-25" aria-hidden="true"></a>          <span class="kw">else</span> <span class="kw">do</span></span>
 <span id="cb9-26"><a href="#cb9-26" aria-hidden="true"></a>            <span class="dt">Write</span> n x <span class="co">-- keep the original</span></span></code></pre></div>
-<p>where the function <code>hasNoFurtherReferences</code> looks at the graph and does a search from all used variables to all refs which might be shared with them, as well as a similar search from the ref. If these transitive dependency sets are disjoint, it means there’s no possible way that the array could be looked at after this write, making is safe to mutate it in place.</p>
+<p>where the function <code>hasNoFurtherReferences</code> looks at the graph and does a search from all used variables to all references which might be shared with them, as well as a similar search from the ref. If these transitive dependency sets are disjoint, it means there’s no possible way that the array could be looked at after this write, making is safe to mutate it in place.</p>
 <p>If there was an intersection, that would indicated that a value might be used which points to the same memory location as <code>ref</code>, and we have to keep the copy operation to maintain our program’s semantics.</p>
 <h2 id="fixing-faster-with-stitches">Fixing Faster with Stitches</h2>
 <p>One of the things which is challenging is the definition of <code>fixGo</code>. Because we have to deal with nested loops quite a lot, it’s imperative that most loops reach their fixpoint on their first iteration, lest we suffer from exponential slowdowns as we delve deeper repeating nested loops.</p>
-<p>This is one the key reason for using our Stiching Graph – it’s very good at returning to its initial state when keys are removed as they go out of scope.</p>
-<p>Consider this program, written in an psuedo-syntax for avalanche.</p>
+<p>This is one the key reason for using our Stitching Graph – it’s very good at returning to its initial state when keys are removed as they go out of scope.</p>
+<p>Consider this program, written in an pseudo-syntax for avalanche.</p>
 <div class="sourceCode" id="cb10"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true"></a><span class="fu">init</span></span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true"></a>  <span class="fu">acc_1</span> <span class="op">=</span></span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true"></a>    []</span>
@@ -388,10 +388,10 @@ How the Tardis Monad and a Stitching Graph helps discover affine array usage, pe
 <ul>
 <li>It’s clear that no references of <code>acc_1</code> are used again (writing doesn’t count as usage), so this copy will be omitted.</li>
 <li>We have to add the reference <code>b -&gt; a</code></li>
-<li>Our graph is not <code>b -&gt; a -&gt; acc_1</code></li>
+<li>Our graph is now <code>b -&gt; a -&gt; acc_1</code></li>
 </ul></li>
 <li>Binding <code>c</code> doesn’t introduce any references into the graph.</li>
-<li>Writing to acc_1 ovewrites out edges in our graph, but there are none, so we have
+<li>Writing to <code>acc_1</code> introduces a new edge to the graph, so we have
 <ul>
 <li><code>acc_1 -&gt; b -&gt; a -&gt; acc_1</code></li>
 </ul></li>
@@ -401,18 +401,24 @@ How the Tardis Monad and a Stitching Graph helps discover affine array usage, pe
 </ul></li>
 <li>As we leave the scope of the <code>read</code>, we’ll further drop <code>a</code> from the graph
 <ul>
-<li>Here though, we would have <code>acc_1 -&gt; acc_1</code>, but, these are simplified</li>
-<li>Our final graph after leaving the scope of <code>read</code> is the empty graph</li>
+<li>Here though, we would have <code>acc_1 -&gt; acc_1</code>, but, these are simplified,</li>
+<li>Therefore our final graph after leaving the scope of <code>read</code> is the empty graph</li>
 </ul></li>
 <li>As this was the graph at the start of the <code>foreach_facts</code>, we’ve reached our fixpoint in a single traversal of the AST, and the copy has been removed.</li>
 </ol>
+<p>So the answer to both of our questions is in the affirmative.</p>
 <h2 id="commentary-and-future-work">Commentary and Future Work</h2>
-<p>It’s worth thinking about what this technique is, and what it might also be used for.</p>
-<p>We’ve essentially written an abstract interpreter for our programs, tracking possible pointer references. While I am very pooly acquainted with the literature on reference counting. This sort of information strikes me as potentially very useful for optimising functional languages which use it reference counting.</p>
+<p>It’s worth thinking about generalising this algorithm, and considering how it relates to others previously described.</p>
+<p>In a real sense, we’ve written an abstract interpreter for our programs, tracking possible pointer references. While I am not 100% across the literature on reference counting optimisations, this sort of information strikes me as potentially very useful for optimising functional languages which use it.</p>
 <p>For example, if we examine our reference graph and see that the potential references will always be 0 or no usages will be used in the future, we won’t even need to check the reference count at all and can either drop or recycle the memory location immediately.</p>
-<p>If we further extended our Stiching Graph to maintain “exact” and “possible” edges (this would mean a small adjustment to the graph and its merge algorithm), and we saw that we would always have exactly the same number of exact edges after a scoped operation or function call, then again we could remove reference counting operations inside, as they must cancel out perfectly.</p>
-<p>In our case, we have a whole program compiler and optimiser, so we can get a <em>very</em> good view of the reference graph; if we however were working with smaller functions, we would need to keep track of what we don’t know. Arguments passed to functions for example, would have “possible” edges from the outside of the function, meaning we can’t omit operationg easily. But as we inlined functions, new oportunities might arise.</p>
+<p>If we further extended our Stitching Graph to maintain “exact” and “possible” edges (this would mean a small adjustment to the graph and its merge algorithm), and we saw that we would always have exactly the same number of exact edges after a scoped operation or function call, then again we could remove reference counting operations, as they must cancel out perfectly.</p>
+<p>In our case, we have a whole-program compiler and optimiser, so we can get a <em>very</em> good view of the reference graph; if we however were working with smaller functions, we would need to keep track of what we don’t know. Arguments passed to functions for example, would have “possible” edges from the outside of the function, meaning we can’t omit operations as easily. But as we inlined functions, new opportunities might arise.</p>
 <p>For example, consider the function <code>map h . filter g . map f</code>: if this were to be aggressively inlined, then we would <em>know</em>, that the <code>cons</code> cells output from <code>map f</code> part would have no external references to them; this means that <code>filter g</code> could drop <code>cons</code> cells without even looking at their reference count when the predicate fails. Furthermore, the function <code>map h</code> could immediately reuse the memory locations for every cons cell still around, replacing the values after applying <code>h</code> to them.</p>
+<h2 id="application-in-a-strict-language">Application in a Strict Language</h2>
+<p>The discovery of this algorithm was challenging, it took time and iteration – even though I could intuitively pick copy operations which could be removed, writing an (even close to) <code>O(n)</code> algorithm was proving to be a real challenge.</p>
+<p>It was only when I remembered Phil Freeman’s <a href="https://hackage.haskell.org/package/tardis">Tardis</a> Monad water problem <a href="https://gist.github.com/paf31/9d84ecf6a6a9b69cdb597a390f25764d">solution</a> that I managed to get a hold of the process and nail down the algorithm.</p>
+<p><em>Laziness, and Monadic composition was critical in allowing me to discover this algorithm.</em></p>
+<p>That said, I think one could make this work in a strict language, by adopting a relatively straight forward, explicit two pass approach, where in the forwards pass, instead of returning a <code>Statement</code> value, we return a function, <code>Usage -&gt; (Statement, Usage)</code>; and pass the usage set backwards while building the graph in our reverse pass.</p>
 
   </div>
 
