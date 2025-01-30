@@ -1,6 +1,6 @@
 ---
-title: Destructive Updates- a Stitch in Time
-date: 2024-08-30
+title: Destructive Updates - a Stitch in Time
+date: 2025-02-01
 description: How the Tardis Monad and a Stitching Graph helps discover affine array usage, reducing run times by up to a half.
 author: Huw Campbell
 ---
@@ -14,7 +14,7 @@ allowing them to combine and fuse hundreds of rich, individual, queries into a c
 safe and efficient execution.
 
 At the heart of the language is our Core intermediate language, which we've spoken about optimising
-in [an earlier post](/docs/posts/2020-09-04-traversals-for-optimisations.html). This is a pure,
+in [an earlier post](/posts/2020-09-04-traversals-for-optimisations.html). This is a pure,
 simply-typed lambda calculus based DSL with restrictions on arbitrary recursion and closure creation.
 
 To ensure speed, we compile all queries to C and convert almost all of our data types into simple,
@@ -123,15 +123,20 @@ reuses constructors (like list's cons) too.
 
 ## Icicle – Compilation Time Copy Elision
 
-In Icicle, we avoid using reference counting because, except for arrays, we don’t perform any
-allocations, and bindings are placed directly onto the stack. For arrays, we use a simple bump
-allocator for each entity being processed because it's fast and we know that each entity's
-operation time will be bounded by the number of events. We should still aim to reduce new array
-allocations though for speed and memory efficiency, but do it entirely at compile time.
+In Icicle, we avoid using reference counting and instead use a simple bump allocator per
+entity. We do this because:
+
+- Except for arrays and strings all bindings are placed directly onto the stack;
+- It's fast;
+- Each entity runs separately and is bounded by the number of events; and
+- It makes clearing memory when we've finished processing an entity close to trivial.
+
+That said, we should still aim to reduce new array allocations though for speed and memory
+efficiency, but here we do it entirely at compile time.
 
 The constraints for this optimization are:
 
-- It should remove copy operations when the copied array will never be accessed again.
+- It should remove copies if the original array will not be accessed again.
 - It must not alter the results of a query.
 - It must not unduly slow down compilation.
 
@@ -248,14 +253,14 @@ go statement =
     -- Let bindings are a lot like reads and
     -- initialisations if the expression is
     -- a reference, then add to the graph.
-    Let nm x ss
+    Let nm x inner
       | Just ref <- arrayReference x ->
         Let nm x <$>
-          scopedGo nm ref ss
+          scopedGo nm ref inner
 
       | otherwise ->
         Let nm x <$>
-          scopedGo' nm ss
+          scopedGo' nm inner
 
     --
     -- If the write is a reference, then we need
@@ -362,7 +367,7 @@ bindings are used later in the program.
 
 For this we need to propagate information backwards, which we can do thanks
 to laziness and the reverse state monad. One package providing a nice
-combination of both a forwards and reverse state Monads is the `tardis`
+combination of both a forwards and reverse state Monads is the [`tardis`][Tardis]
 package, which supplies the `Tardis` monad.
 
 In the above code listing, we swap to the `Tardis` monad and replace `get`
@@ -372,8 +377,8 @@ a `Read`, we send backwards the usages (free variables)
 
 ```haskell
 go :: Statement -> Tardis (Set Name) Graph Statement
-go statements =
-  case statements of
+go statement =
+  case statement of
     Let nm x ss
       | Just ref <- arrayReference x ->
         modifyBackwards (Set.delete nm . Set.union (Exp.freeVars x))
@@ -522,22 +527,21 @@ counting optimisations, this sort of information strikes me as potentially
 very useful for optimising functional languages which use it.
 
 For example, if we examine our reference graph and see that the potential references
-will always be 0 or no usages will be used in the future, we won't even need to check
-the reference count at all and can either drop or recycle the memory location immediately.
+will always be zero or no usages will be used in the future, we won't even need to check
+the reference count at all and can either drop or recycle a memory location immediately.
 
-
-If we further extended our Stitching Graph to maintain "exact" and "possible" edges
-(this would mean a small adjustment to the graph and its merge algorithm), and we saw
-that we would always have exactly the same number of exact edges after a scoped operation
-or function call, then again we could remove reference counting operations, as they
-must cancel out perfectly.
-
+We could further extend our Graph algorithm to include the possible range of counts between
+references – which would mostly entail changes to the merging and stitching algorithms.
+With this information, if we observed an object used inside a scoped operation
+which always had the exact same positive number of edges to it at entry and exit,
+it would seem we could again eliminate all reference counting operations on it –
+they must cancel out.
 
 In our case, we have a whole-program compiler and optimiser, so we can get a _very_ good
 view of the reference graph; if we however were working with smaller functions, we would
 need to keep track of what we don't know. Arguments passed to functions for example,
-would have "possible" edges from the outside of the function, meaning we can't omit
-operations as easily. But as we inlined functions, new opportunities might arise.
+would have any number of possible edges from the outside of the function, meaning we can't
+omit operations as easily. But as we inlined functions, new opportunities might arise.
 
 For example, consider the function `map h . filter g . map f`: if this were to be aggressively
 inlined, then we would _know_, that the `cons` cells output from `map f` part would have no
@@ -546,22 +550,25 @@ without even looking at their reference count when the predicate fails. Furtherm
 the function `map h` could immediately reuse the memory locations for every cons cell still
 around, replacing the values after applying `h` to them.
 
+How much of an improvement if any this might offer over [Counting Immutable Beans] is an
+open question.
+
 ## Application in a Strict Language
 
-The discovery of this algorithm was challenging, it took time and iteration –
-even though I could intuitively pick copy operations which could be removed, writing an
-(even close to) `O(n)` algorithm was proving to be a real challenge.
+The discovery of this algorithm was challenging, it took time and iteration – and
+even though I could intuitively see copy operations which could be removed,
+writing an even close to `O(n)` algorithm was proving to be trifficult.
 
-It was only when I remembered Phil Freeman's [Tardis] Monad water problem [solution][PAF Water] that
-I managed to get a hold of the process and nail down the algorithm.
+It was only when I remembered Phil Freeman's Tardis Monad [water problem solution][PAF Water] that
+I managed to solidify my ideas and really nail down the algorithm.
 
-*Laziness, and Monadic composition was critical in allowing me to discover this algorithm.*
+*Laziness, purity, and monadic composition were critical in allowing me to discover this algorithm.*
 
 That said, I think one could make this work in a strict language, by adopting a relatively
 straight forward, explicit two pass approach, where in the forwards pass, instead of returning
 a `Statement` value, we return a function, `Usage -> (Statement, Usage)`; and pass the usage
 set backwards while building the graph in our reverse pass.
-
+  
   [Advanced R]: http://adv-r.had.co.nz/memory.html#modification
   [Precise, Automatic, Reference Counting]: https://koka-lang.github.io/koka/doc/book.html#why-perceus
   [Counting Immutable Beans]: https://arxiv.org/pdf/1908.05647
