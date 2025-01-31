@@ -165,7 +165,7 @@ How the Tardis Monad and a Stitching Graph helps discover affine array usage, pe
 <span id="cb5-11"><a href="#cb5-11" aria-hidden="true"></a> <span class="op">|</span> <span class="dt">Let</span> <span class="dt">Name</span> <span class="dt">Exp</span> <span class="dt">Statement</span></span>
 <span id="cb5-12"><a href="#cb5-12" aria-hidden="true"></a> <span class="co">-- | Initialise an accumulator</span></span>
 <span id="cb5-13"><a href="#cb5-13" aria-hidden="true"></a> <span class="op">|</span> <span class="dt">InitAccumulator</span> <span class="op">!</span><span class="dt">Name</span> <span class="op">!</span><span class="dt">Exp</span> <span class="dt">Statement</span></span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true"></a> <span class="co">-- | Read from a non-latest accumulator.</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true"></a> <span class="co">-- | Read from an accumulator into a local binding</span></span>
 <span id="cb5-15"><a href="#cb5-15" aria-hidden="true"></a> <span class="op">|</span> <span class="dt">Read</span> <span class="dt">Name</span> <span class="dt">Name</span> <span class="dt">Statement</span></span>
 <span id="cb5-16"><a href="#cb5-16" aria-hidden="true"></a> <span class="co">-- | Update an accumulator</span></span>
 <span id="cb5-17"><a href="#cb5-17" aria-hidden="true"></a> <span class="op">|</span> <span class="dt">Write</span> <span class="dt">Name</span> <span class="dt">Exp</span></span></code></pre></div>
@@ -354,29 +354,29 @@ How the Tardis Monad and a Stitching Graph helps discover affine array usage, pe
 <span id="cb9-24"><a href="#cb9-24" aria-hidden="true"></a>            <span class="dt">Write</span> n (<span class="dt">Exp.Var</span> ref)</span>
 <span id="cb9-25"><a href="#cb9-25" aria-hidden="true"></a>          <span class="kw">else</span> <span class="kw">do</span></span>
 <span id="cb9-26"><a href="#cb9-26" aria-hidden="true"></a>            <span class="dt">Write</span> n x <span class="co">-- keep the original</span></span></code></pre></div>
-<p>where the function <code>hasNoFurtherReferences</code> looks at the graph and does a search from all used variables to all references which might be shared with them, as well as a similar search from the ref. If these transitive dependency sets are disjoint, it means there’s no possible way that the array could be looked at after this write, making is safe to mutate it in place.</p>
+<p>where the function <code>hasNoFurtherReferences</code> looks at the graph and does a search from all used variables to all references which might be shared with them, as well as a similar search from the ref. If these transitive dependency sets are disjoint, it means there’s no possible way that the array could be looked at after this write, making it safe to mutate it in place.</p>
 <p>If there was an intersection, that would indicated that a value might be used which points to the same memory location as <code>ref</code>, and we have to keep the copy operation to maintain our program’s semantics.</p>
 <h2 id="fixing-faster-with-stitches">Fixing Faster with Stitches</h2>
 <p>One of the things which is challenging is the definition of <code>fixGo</code>. Because we have to deal with nested loops quite a lot, it’s imperative that most loops reach their fixpoint on their first iteration, lest we suffer from exponential slowdowns as we delve deeper repeating nested loops.</p>
 <p>This is one the key reason for using our Stitching Graph – it’s very good at returning to its initial state when keys are removed as they go out of scope.</p>
 <p>Consider this program, written in an pseudo-syntax for avalanche.</p>
 <div class="sourceCode" id="cb10"><pre class="sourceCode elm"><code class="sourceCode elm"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true"></a><span class="fu">init</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true"></a>  <span class="fu">acc_1</span> <span class="op">=</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true"></a>  <span class="fu">arr</span> <span class="op">=</span></span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true"></a>    []</span>
 <span id="cb10-4"><a href="#cb10-4" aria-hidden="true"></a><span class="kw">in</span> {</span>
 <span id="cb10-5"><a href="#cb10-5" aria-hidden="true"></a>  <span class="fu">foreach_fact</span> {</span>
 <span id="cb10-6"><a href="#cb10-6" aria-hidden="true"></a>    <span class="fu">read</span></span>
 <span id="cb10-7"><a href="#cb10-7" aria-hidden="true"></a>      <span class="fu">a</span> <span class="op">=</span></span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true"></a>        <span class="fu">acc_1</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true"></a>        <span class="fu">arr</span> <span class="co">{- read `arr` to a local binding -}</span></span>
 <span id="cb10-9"><a href="#cb10-9" aria-hidden="true"></a>    <span class="kw">in</span> {</span>
 <span id="cb10-10"><a href="#cb10-10" aria-hidden="true"></a>      <span class="kw">let</span></span>
 <span id="cb10-11"><a href="#cb10-11" aria-hidden="true"></a>        <span class="fu">b</span> <span class="op">=</span></span>
 <span id="cb10-12"><a href="#cb10-12" aria-hidden="true"></a>          <span class="fu">array_copy</span> <span class="fu">a</span></span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true"></a>        <span class="fu">c</span> <span class="op">=</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true"></a>        <span class="fu">len</span> <span class="op">=</span></span>
 <span id="cb10-14"><a href="#cb10-14" aria-hidden="true"></a>          <span class="fu">array_length</span> <span class="fu">b</span></span>
 <span id="cb10-15"><a href="#cb10-15" aria-hidden="true"></a>      <span class="kw">in</span> {</span>
-<span id="cb10-16"><a href="#cb10-16" aria-hidden="true"></a>        <span class="fu">acc_1</span> :<span class="op">=</span> <span class="co">{- write -}</span></span>
-<span id="cb10-17"><a href="#cb10-17" aria-hidden="true"></a>          <span class="fu">array_insert</span> <span class="fu">b</span> <span class="fu">c</span> <span class="fu">c</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true"></a>        <span class="fu">arr</span> :<span class="op">=</span> <span class="co">{- write `len` to index `len` -}</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true"></a>          <span class="fu">array_insert</span> <span class="fu">b</span> <span class="fu">len</span> <span class="fu">len</span></span>
 <span id="cb10-18"><a href="#cb10-18" aria-hidden="true"></a>      }      </span>
 <span id="cb10-19"><a href="#cb10-19" aria-hidden="true"></a>    }</span>
 <span id="cb10-20"><a href="#cb10-20" aria-hidden="true"></a>  }  </span>
@@ -385,30 +385,30 @@ How the Tardis Monad and a Stitching Graph helps discover affine array usage, pe
 <pre><code>[0,1,2,3,...]</code></pre>
 <p>with a length equal to the number of facts seen, but will the copy operation be removed, and, will the fixpoint for <em>foreach_fact</em> be determined in a single pass? Let’s have a look:</p>
 <ol type="1">
-<li>The initialisation of <code>acc_1</code> is a pure expression, so doesn’t introduce anything into the reference graph.</li>
+<li>The initialisation of <code>arr</code> is a pure expression, so doesn’t introduce anything into the reference graph.</li>
 <li>When we reach <code>foreach_facts</code> the first time, the graph is empty.</li>
-<li>When we <code>read a = acc_1</code>, the graph now has a reference
+<li>When we <code>read a = arr</code> the accumulator <code>arr</code> into <code>a</code>, the graph gains a reference
 <ul>
-<li><code>a -&gt; acc_1</code></li>
+<li><code>a -&gt; arr</code></li>
 </ul></li>
 <li>In let binding <code>b</code>, we reach a copy operation.
 <ul>
-<li>It’s clear that no references of <code>acc_1</code> are used again (writing doesn’t count as usage), so this copy will be omitted.</li>
+<li>It’s clear that no references of <code>arr</code> are used again (writing to it doesn’t count as usage), so this copy will be omitted.</li>
 <li>We have to add the reference <code>b -&gt; a</code></li>
-<li>Our graph is now <code>b -&gt; a -&gt; acc_1</code></li>
+<li>Our graph is now <code>b -&gt; a -&gt; arr</code></li>
 </ul></li>
-<li>Binding <code>c</code> doesn’t introduce any references into the graph.</li>
-<li>Writing to <code>acc_1</code> introduces a new edge to the graph, so we have
+<li>Binding <code>len</code> doesn’t introduce any references into the graph.</li>
+<li>Writing to <code>arr</code> introduces a new edge to the graph, so we have
 <ul>
-<li><code>acc_1 -&gt; b -&gt; a -&gt; acc_1</code></li>
+<li><code>arr -&gt; b -&gt; a -&gt; arr</code></li>
 </ul></li>
 <li>As we leave the scope of the let bindings
 <ul>
-<li>b will be removed and we’ll have <code>acc_1 -&gt; a -&gt; acc_1</code></li>
+<li>b will be removed and we’ll have <code>arr -&gt; a -&gt; arr</code></li>
 </ul></li>
 <li>As we leave the scope of the <code>read</code>, we’ll further drop <code>a</code> from the graph
 <ul>
-<li>Here though, we would have <code>acc_1 -&gt; acc_1</code>, but, these are simplified,</li>
+<li>Here though, we would have <code>arr -&gt; arr</code>, but, these are simplified,</li>
 <li>Therefore our final graph after leaving the scope of <code>read</code> is the empty graph</li>
 </ul></li>
 <li>As this was the graph at the start of the <code>foreach_facts</code>, we’ve reached our fixpoint in a single traversal of the AST, and the copy has been removed.</li>

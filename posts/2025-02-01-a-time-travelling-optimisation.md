@@ -181,7 +181,7 @@ data Statement
  | Let Name Exp Statement
  -- | Initialise an accumulator
  | InitAccumulator !Name !Exp Statement
- -- | Read from a non-latest accumulator.
+ -- | Read from an accumulator into a local binding
  | Read Name Name Statement
  -- | Update an accumulator
  | Write Name Exp
@@ -439,7 +439,7 @@ where the function `hasNoFurtherReferences` looks at the graph and
 does a search from all used variables to all references which might be shared with them,
 as well as a similar search from the ref. If these transitive dependency sets
 are disjoint, it means there's no possible way that the array could be looked at
-after this write, making is safe to mutate it in place.
+after this write, making it safe to mutate it in place.
 
 
 If there was an intersection, that would indicated that a value might be used which
@@ -461,22 +461,22 @@ Consider this program, written in an pseudo-syntax for avalanche.
 
 ```elm
 init
-  acc_1 =
+  arr =
     []
 in {
   foreach_fact {
     read
       a =
-        acc_1
+        arr {- read `arr` to a local binding -}
     in {
       let
         b =
           array_copy a
-        c =
+        len =
           array_length b
       in {
-        acc_1 := {- write -}
-          array_insert b c c
+        arr := {- write `len` to index `len` -}
+          array_insert b len len
       }      
     }
   }  
@@ -493,23 +493,23 @@ with a length equal to the number of facts seen, but will
 the copy operation be removed, and, will the fixpoint for _foreach_fact_
 be determined in a single pass? Let's have a look:
 
-1. The initialisation of `acc_1` is a pure expression, so doesn't introduce anything
+1. The initialisation of `arr` is a pure expression, so doesn't introduce anything
    into the reference graph.
 2. When we reach `foreach_facts` the first time, the graph is empty.
-3. When we `read a = acc_1`, the graph now has a reference
-   - `a -> acc_1`
+3. When we `read a = arr` the accumulator `arr` into `a`, the graph gains a reference
+   - `a -> arr`
 4. In let binding `b`, we reach a copy operation.
-   - It's clear that no references of `acc_1` are used again (writing doesn't count
-     as usage), so this copy will be omitted.
+   - It's clear that no references of `arr` are used again (writing to it doesn't
+     count as usage), so this copy will be omitted.
    - We have to add the reference `b -> a`
-   - Our graph is now `b -> a -> acc_1`
-5. Binding `c` doesn't introduce any references into the graph.
-6. Writing to `acc_1` introduces a new edge to the graph, so we have
-   - `acc_1 -> b -> a -> acc_1`
+   - Our graph is now `b -> a -> arr`
+5. Binding `len` doesn't introduce any references into the graph.
+6. Writing to `arr` introduces a new edge to the graph, so we have
+   - `arr -> b -> a -> arr`
 7. As we leave the scope of the let bindings
-   - b will be removed and we'll have `acc_1 -> a -> acc_1`
+   - b will be removed and we'll have `arr -> a -> arr`
 8. As we leave the scope of the `read`, we'll further drop `a` from the graph
-   - Here though, we would have `acc_1 -> acc_1`, but, these are simplified,
+   - Here though, we would have `arr -> arr`, but, these are simplified,
    - Therefore our final graph after leaving the scope of `read` is the empty graph
 9. As this was the graph at the start of the `foreach_facts`, we've reached our
    fixpoint in a single traversal of the AST, and the copy has been removed.
