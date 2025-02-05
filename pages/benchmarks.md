@@ -12,7 +12,7 @@ write in SQL, then wrote simple versions in Icicle, and optimised the
 daylights out of the SQL versions to get the results show below.
 
 It took about half an hour to write the Icicle, and many iterations to
-nut out the SQL.
+figure out the SQL.
 
 The thing is though, when we just gave the definitions for the queries
 we wanted to an engineer who hadn't been thinking about this problem
